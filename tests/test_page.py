@@ -46,7 +46,8 @@ PAGE = Path(cardiag.__file__).parent / "web" / "index.html"
 pytestmark = pytest.mark.skipif(ENGINE is None, reason="needs Node.js or QuickJS to run the page's script")
 
 
-def test_page_script_with_real_server_data(served, tmp_path):
+def test_page_script_with_real_server_data(box, tmp_path):
+    served = box
     html = PAGE.read_text(encoding="utf-8")
     script = re.search(r"<script>(.*)</script>", html, re.S).group(1)
 
@@ -58,6 +59,28 @@ def test_page_script_with_real_server_data(served, tmp_path):
     wait_for(lambda: served.hub.status()["recording"]["seconds"] >= 0.1)
     served.request("/api/record", {"action": "stop"})
     data["sessions"] = served.request("/api/sessions")[1]
+
+    data["simulating"] = served.request("/api/simulation", {"vehicle": "tahoe"})[1]
+    wait_for(lambda: served.hub.status()["state"] == "connected")
+    data["tahoe"] = served.stream_events(1)[0]
+    served.request("/api/simulation", {"vehicle": None})
+    wait_for(lambda: served.hub.status()["state"] == "connected")
+
+    network = lambda body=None: served.request("/api/network", body)[1]  # noqa: E731
+    data["network"] = network()
+    data["scan"] = served.request("/api/network/scan")[1]
+    data["network_saved"] = network({"action": "save", "ssid": "Home", "password": "correct horse"})
+    data["network_joining"] = network({"action": "join"})
+    wait_for(lambda: network()["mode"] == "wifi")
+    data["network_joined"] = network()
+    data["network_leaving"] = network({"action": "hotspot"})
+    wait_for(lambda: network()["mode"] == "hotspot")
+
+    data["update"] = served.request("/api/update")[1]
+    box.github.publish("9.0.0", notes="Reads more codes.")
+    data["update_found"] = served.request("/api/update", {"action": "check"})[1]
+    data["update_installed"] = served.request("/api/update", {"action": "install"})[1]
+    assert not [name for name, value in data.items() if isinstance(value, dict) and "error" in value]
 
     ids = re.findall(r'\bid="([^"]+)"', html)
     program = "\n".join(

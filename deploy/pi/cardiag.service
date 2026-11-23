@@ -1,0 +1,19 @@
+[Unit]
+Description=cardiag OBD-II web interface
+After=NetworkManager.service
+
+[Service]
+User=@USER@
+SupplementaryGroups=dialout
+StateDirectory=cardiag
+StateDirectoryMode=0700
+Environment=XDG_DATA_HOME=/var/lib
+Environment=CARDIAG_SERVICE=1
+ExecStart=/usr/local/bin/cardiag serve --host 0.0.0.0 --manage-wifi --update-dir /opt/cardiag
+Restart=always
+RestartSec=5s
+NoNewPrivileges=yes
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,7 @@
+// The cardiag service runs without a login session, so NetworkManager would
+// otherwise refuse to let it switch the box between its hotspot and Wi-Fi.
+polkit.addRule(function(action, subject) {
+    if (action.id.indexOf("org.freedesktop.NetworkManager.") == 0 && subject.user == "@USER@") {
+        return polkit.Result.YES;
+    }
+});

@@ -2,8 +2,10 @@
 
 import pytest
 
+import cardiag
+
 from cardiag.service import VOLTAGE_KEY, Hub, NotConnected
-from cardiag.sim import SimElm, SimTransport, make_focus
+from cardiag.sim import SimElm, SimTransport, make_focus, make_tahoe
 from cardiag.store import Store
 from cardiag.transport import LinkError
 
@@ -133,3 +135,74 @@ def test_recording_writes_a_session(hub_factory):
     store.close()
     assert session["note"] == "cold start" and session["vin"] == "1FADP3F2XHL123456"
     assert session["cycles"] >= 3 and session["ended_at"] is not None
+
+
+# ---- switching between the adapter and simulated vehicles ------------------
+
+def simulated(make):
+    vehicle = make()
+    return lambda: SimTransport(SimElm(vehicle))
+
+
+def test_switching_to_a_simulated_vehicle_and_back(tmp_path):
+    def no_adapter():
+        raise LinkError("no OBD adapter found")
+
+    hub = Hub(
+        no_adapter,
+        db_path=str(tmp_path / "s.db"),
+        interval=0.01,
+        retry_delay=30,  # a switch must not have to wait this out
+        simulators={"focus": simulated(make_focus), "tahoe": simulated(make_tahoe)},
+    )
+    hub.start()
+    try:
+        wait_for(lambda: state(hub) == "no_adapter")
+        status = hub.status()
+        assert status["simulation"] is None and status["simulations"] == ["focus", "tahoe"]
+        assert status["version"] == cardiag.__version__
+
+        assert hub.set_simulation("focus")["simulation"] == "focus"
+        wait_for(lambda: state(hub) == "connected")
+        assert hub.status()["vin"] == "1FADP3F2XHL123456"
+        hub.set_watch(["0C"])
+        hub.start_recording("in the simulator")
+
+        switched = hub.set_simulation("tahoe")
+        assert switched["state"] == "starting" and switched["vin"] is None  # nothing of the Focus lingers
+        wait_for(lambda: state(hub) == "connected")
+        status = hub.status()
+        assert status["network"] == "SAE J1850 VPW" and status["recording"] is None
+        assert len(hub.values()["watched"]) > 1  # the choice made for the Focus does not carry over
+        _, payload = hub.wait_for_update(-1, timeout=2)
+        assert payload["status"]["simulation"] == "tahoe"
+
+        hub.set_simulation(None)
+        wait_for(lambda: state(hub) == "no_adapter")
+        assert hub.status()["message"] == "no OBD adapter found"
+
+        store = Store(hub._db_path)
+        assert store.sessions()[0]["ended_at"] is not None  # the recording was closed by the switch
+        store.close()
+    finally:
+        hub.stop()
+
+
+def test_unknown_simulated_vehicles_are_refused(hub_factory):
+    hub = hub_factory(lambda: SimTransport(SimElm(make_focus())))
+    for bad in ("delorean", ["focus"], 7):
+        with pytest.raises(ValueError, match="no simulated vehicle"):
+            hub.set_simulation(bad)
+    with pytest.raises(ValueError, match="no simulated vehicle"):
+        Hub(lambda: None, simulation="focus")
+
+
+def test_can_start_in_a_simulation(tmp_path):
+    hub = Hub(lambda: None, db_path=str(tmp_path / "s.db"), interval=0.01,
+              simulators={"focus": simulated(make_focus)}, simulation="focus")
+    hub.start()
+    try:
+        wait_for(lambda: state(hub) == "connected")
+        assert hub.status()["simulation"] == "focus"
+    finally:
+        hub.stop()

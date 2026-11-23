@@ -79,3 +79,10 @@ globalThis.EventSource = class {
     streams.push(this);
   }
 };
+
+// Timers are collected rather than run, so the scenario decides when time passes.
+const timers = [];
+globalThis.setTimeout = (callback) => timers.push(callback);
+
+let reloads = 0;
+globalThis.location = { port: "8000", reload() { reloads++; } };

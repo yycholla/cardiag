@@ -16,6 +16,7 @@ from typing import Any, Callable
 
 import serial
 
+from . import __version__
 from .elm import AdapterError, Elm327, NoVehicle
 from .frames import FrameError
 from .obd import DTC_SERVICES, Obd, Reading, ecu_label
@@ -85,8 +86,15 @@ class Hub:
         db_path: str | None = None,
         interval: float = 0.25,
         retry_delay: float = 3.0,
+        simulators: dict[str, Callable[[], Transport]] | None = None,
+        simulation: str | None = None,
     ) -> None:
         self._open_transport = open_transport
+        self._simulators = dict(simulators or {})
+        if simulation is not None and simulation not in self._simulators:
+            raise ValueError(f"there is no simulated vehicle called {simulation!r}")
+        self._simulation = simulation  # None means the real adapter
+        self._switch = threading.Event()  # set when the source changes, to drop the current link
         self._db_path = db_path
         self.interval = interval
         self.retry_delay = retry_delay
@@ -122,6 +130,7 @@ class Hub:
 
     def stop(self) -> None:
         self._stop.set()
+        self._switch.set()
         self._wake.set()
         with self._changed:
             self._changed.notify_all()
@@ -163,6 +172,20 @@ class Hub:
                 raise ValueError(f"this vehicle does not offer PID {', '.join(unknown)}")
             self._watch = wanted
         self._wake.set()
+
+    def set_simulation(self, name: str | None) -> dict:
+        """Switch between the real adapter (None) and a simulated vehicle."""
+        if name is not None and (not isinstance(name, str) or name not in self._simulators):
+            raise ValueError(f"there is no simulated vehicle called {name!r}")
+        with self._changed:
+            if name != self._simulation:
+                self._simulation = name
+                self._watch = None  # a different car offers different values
+                self._reset("starting", "")
+                self._switch.set()
+            status = self._status()
+        self._wake.set()
+        return status
 
     def wait_for_update(self, seen: int, timeout: float) -> tuple[int, dict | None]:
         """Block until something changes. Returns the new version and the latest state."""
@@ -219,7 +242,19 @@ class Hub:
             "vin": self._vin,
             "modules": list(self._modules),
             "recording": recording,
+            "version": __version__,
+            "simulation": self._simulation,
+            "simulations": sorted(self._simulators),
         }
+
+    def _reset(self, state: str, message: str) -> None:
+        self._state, self._message = state, message
+        if state != "no_vehicle":
+            self._adapter = None  # with no vehicle, the adapter itself was still found
+        self._network = self._vin = None
+        self._modules, self._available, self._readings = [], [], []
+        self._version += 1
+        self._changed.notify_all()
 
     def _watched(self) -> list[int]:
         wanted = DEFAULT_LIVE_PIDS if self._watch is None else self._watch
@@ -230,8 +265,11 @@ class Hub:
     def _run(self) -> None:
         while not self._stop.is_set():
             transport = None
+            with self._changed:
+                self._switch.clear()
+                simulation = self._simulation
             try:
-                transport = self._open_transport()
+                transport = (self._simulators[simulation] if simulation else self._open_transport)()
                 elm = Elm327(transport)
                 info = elm.initialise()
                 with self._changed:
@@ -251,14 +289,20 @@ class Hub:
                         transport.close()
                     except OSError:
                         pass
-            self._stop.wait(self.retry_delay)
+            if self._switch.is_set():
+                self._fail_jobs("the data source was changed")
+            else:
+                self._switch.wait(self.retry_delay)  # a change of source cuts the wait short
 
     def _mark_connected(self, obd: Obd) -> None:
         supported = obd.supported_pids()
         offered = set().union(*supported.values()) if supported else set()
         vin = obd.vin()
         with self._changed:
+            if self._switch.is_set():
+                return  # the source was changed while this one was connecting
             self._state, self._message = "connected", ""
+            self._readings = []
             self._network = obd.protocol.name
             self._vin = vin
             self._modules = [ecu_label(ecu, obd.protocol) for ecu in obd.ecus]
@@ -268,13 +312,11 @@ class Hub:
 
     def _mark_disconnected(self, state: str, message: str) -> None:
         with self._changed:
-            self._state, self._message = state, message
-            if state == "no_adapter":
-                self._adapter = None
-            self._network = self._vin = None
-            self._modules, self._available, self._readings = [], [], []
-            self._version += 1
-            self._changed.notify_all()
+            if not self._switch.is_set():  # otherwise the state already says "starting"
+                self._reset(state, message)
+        self._fail_jobs(message)
+
+    def _fail_jobs(self, message: str) -> None:
         while True:
             try:
                 _, future = self._jobs.get_nowait()
@@ -285,7 +327,7 @@ class Hub:
     def _poll(self, elm: Elm327, obd: Obd) -> None:
         started = time.monotonic()
         silent_passes = 0
-        while not self._stop.is_set():
+        while not self._stop.is_set() and not self._switch.is_set():
             pass_started = time.monotonic()
             self._run_jobs(obd)
             with self._changed:
@@ -311,6 +353,8 @@ class Hub:
                 self._store.add_samples(self._recording["session"], self._record_cycle, samples)
                 self._record_cycle += 1
             with self._changed:
+                if self._switch.is_set():
+                    return
                 self._readings = [reading for _, reading in samples]
                 self._elapsed = pass_started - started
                 self._version += 1
