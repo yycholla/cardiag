@@ -34,7 +34,9 @@ Three simulated vehicles are built in:
 
 `focus_dct` repeats a 150-second lap: a gentle run up through the gears, then a
 hard one. Under the hard run third gear slips and the shift from second to
-third is slow. Its gear ratios are invented.
+third is slow. Its gear ratios are invented. Its transmission module also
+answers four maker-specific identifiers, for trying the scanner: clutch slip at
+the two the forum lead names, and a gear and a temperature at invented ones.
 
 ## Use it with the adapter
 
@@ -92,10 +94,39 @@ unplugged or the ignition is off, so it can be started first. The tabs:
 
 A link ending in `#drive`, `#diagnosis` and so on opens on that tab.
 
+Settings → "Polling" sets how often the watched values are read, from once
+every five seconds to as fast as the car answers, and shows the rate actually
+being achieved. The choice is kept across restarts; `--interval` on the
+command line overrides it.
+
+### Values only the maker has
+
+Modules keep figures beyond the standard set. A dual-clutch gearbox, for
+instance, knows its own clutch slip, its clutch temperature and the gear it
+wants. Setup, step 6, reads such values with service 22 (read data by
+identifier), addressed to one module. It is a read, like everything else
+cardiag sends, and so far works on 11-bit CAN only.
+
+Makers do not publish where these values are kept. Each one is therefore
+something you define: the module, the identifier, how many bytes make the
+number, whether it can be negative, and what to multiply and add. Once defined,
+a value is read on every update, shown on the Live tab, kept in recordings and
+traced on the Drive tab.
+
+To find them, "Find what a module answers" asks a module for a run of
+identifiers and lists the ones it has, with their bytes. Scan, change one thing
+on the car, scan again, and the page marks which bytes moved.
+
+Two leads for the Ford dual-clutch gearbox are offered as a starting point:
+clutch A and clutch B slip, at 1EBB and 1EBC on the transmission module. They
+come from an owners' forum, not from Ford, and have not been confirmed on a car
+by this project. No identifier for clutch temperature or commanded gear is
+built in, because none could be confirmed.
+
 What the Drive tab can and cannot know: standard OBD-II reports no gear, no
-clutch state and no transmission temperature. Everything there is worked out
-from engine speed and road speed. The transmission module's own slip and
-temperature figures need maker-specific requests, which cardiag does not send.
+clutch state and no transmission temperature. The gear map, shifts and slip
+there are worked out from engine speed and road speed. The transmission
+module's own figures are maker-specific; see below for reading them.
 The healthy bands are general rules of thumb for petrol engines unless a
 baseline marked as known good has been taken; none of them are the maker's
 figures.
@@ -186,10 +217,10 @@ one does not stay up after the restart, the Pi goes back to it by itself and
 the page says so.
 
 To publish a release, change `__version__` in `src/cardiag/__init__.py`, merge
-that to `main`, and tag it with the same number:
+that to `main`, and only then tag it with the same number:
 
 ```sh
-gh release create v0.4.0 --generate-notes
+gh release create v0.5.0 --target main --generate-notes
 ```
 
 A release whose tag and `__version__` disagree is refused by the Pi. So is one
@@ -235,6 +266,7 @@ QuickJS (`qjs`) and is skipped without one. It checks behaviour, not layout.
 | `src/cardiag/analysis.py` | The arithmetic: gears, shifts, slip, fuel trim map, air flow, healthy bands |
 | `src/cardiag/garage.py` | Per-car setup, and reports for the live car or a recording |
 | `src/cardiag/sync.py` | Sending recordings to a central server |
+| `src/cardiag/maker.py` | Definitions of maker-specific values, and turning their bytes into numbers |
 | `src/cardiag/service.py` | Background worker that owns the adapter and retries the connection |
 | `src/cardiag/web.py` | Web server: JSON endpoints and a live event stream |
 | `src/cardiag/web/index.html` | The web page |

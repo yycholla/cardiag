@@ -20,6 +20,7 @@ import serial
 from . import __version__
 from .elm import AdapterError, Elm327, NoVehicle
 from .frames import FrameError
+from .maker import MakerValue, parse as parse_maker
 from .obd import DTC_SERVICES, Obd, Reading, ecu_label
 from .pids import PIDS
 from .store import Store
@@ -113,6 +114,9 @@ class Hub:
         self._modules: list[str] = []
         self._available: list[int] = []
         self._offered: list[dict] = []  # per module: its name and the PIDs it offers
+        self._ecus: list[dict] = []  # per module: the address it answers from and its name
+        self._maker_ok = False  # whether this network lets maker-specific values be read
+        self._maker: list[MakerValue] = []  # maker-specific values read on every pass
         self._history: deque[tuple[float, dict[str, float]]] = deque(maxlen=HISTORY_PASSES)
         self._signals: dict[str, dict] = {}  # name and unit of every value seen
         self.on_recorded: Callable[[], None] | None = None  # called when a recording ends
@@ -176,6 +180,41 @@ class Hub:
         """The numeric values of every pass since this car connected, and what they are called."""
         with self._changed:
             return list(self._history), dict(self._signals)
+
+    def modules(self) -> dict:
+        """The modules that answer, and whether maker-specific values can be read from them."""
+        with self._changed:
+            return {"supported": self._maker_ok, "modules": [dict(module) for module in self._ecus]}
+
+    def maker(self) -> list[MakerValue]:
+        with self._changed:
+            return list(self._maker)
+
+    def set_maker(self, values: list[MakerValue]) -> None:
+        with self._changed:
+            self._maker = list(values)
+        self._wake.set()
+
+    def set_interval(self, seconds: float) -> None:
+        """Change the least time between passes. Zero means as fast as the car answers."""
+        with self._changed:
+            self.interval = seconds
+            self._version += 1
+            self._changed.notify_all()
+        self._wake.set()
+
+    def scan(self, module: int, first: int, count: int) -> list[tuple[int, bytes]]:
+        """Ask one module for a run of maker-specific identifiers; return the ones it has."""
+
+        def job(obd: Obd) -> list[tuple[int, bytes]]:
+            found = []
+            for identifier in range(first, first + count):
+                data = obd.read_identifier(module, identifier)
+                if data is not None:
+                    found.append((identifier, data))
+            return found
+
+        return self._call(job, timeout=120.0)
 
     def set_watch(self, pids: list[str]) -> None:
         try:
@@ -263,7 +302,17 @@ class Hub:
             "version": __version__,
             "simulation": self._simulation,
             "simulations": sorted(self._simulators),
+            "interval": self.interval,
+            "rate": self._rate(),
+            "values": len(self._readings),
         }
+
+    def _rate(self) -> float | None:
+        """Passes a second, measured over the latest twenty."""
+        recent = list(self._history)[-21:]
+        if len(recent) < 2 or recent[-1][0] <= recent[0][0]:
+            return None
+        return round((len(recent) - 1) / (recent[-1][0] - recent[0][0]), 1)
 
     def _reset(self, state: str, message: str) -> None:
         self._state, self._message = state, message
@@ -271,7 +320,7 @@ class Hub:
             self._adapter = None  # with no vehicle, the adapter itself was still found
         self._network = self._vin = None
         self._modules, self._available, self._readings = [], [], []
-        self._offered = []
+        self._offered, self._ecus, self._maker_ok, self._maker = [], [], False, []
         self._history.clear()
         self._version += 1
         self._changed.notify_all()
@@ -318,6 +367,7 @@ class Hub:
         supported = obd.supported_pids()
         offered = set().union(*supported.values()) if supported else set()
         vin = obd.vin()
+        maker = self._saved_maker(vin) if obd.maker_values else []
         with self._changed:
             if self._switch.is_set():
                 return  # the source was changed while this one was connecting
@@ -331,9 +381,22 @@ class Hub:
                 {"module": ecu_label(ecu, obd.protocol), "pids": sorted(pid for pid in pids if pid != 0x01)}
                 for ecu, pids in sorted(supported.items())
             ]
+            self._ecus = [{"reply": f"{ecu:03X}", "name": ecu_label(ecu, obd.protocol)} for ecu in obd.ecus]
+            self._maker_ok = obd.maker_values
+            self._maker = maker
             self._history.clear()
             self._version += 1
             self._changed.notify_all()
+
+    def _saved_maker(self, vin: str | None) -> list[MakerValue]:
+        """The maker-specific values set up for this car, if its saved list still makes sense."""
+        store = Store(self._db_path)
+        try:
+            return parse_maker(store.profile(vin).get("maker") or [])
+        except ValueError:
+            return []
+        finally:
+            store.close()
 
     def _mark_disconnected(self, state: str, message: str) -> None:
         with self._changed:
@@ -357,6 +420,7 @@ class Hub:
             self._run_jobs(obd)
             with self._changed:
                 watched = self._watched()
+                maker = list(self._maker)
             samples = []
             for pid in watched:
                 reading = obd.read_pid(pid)
@@ -368,6 +432,11 @@ class Hub:
                     raise NoVehicle("the vehicle stopped answering; is the ignition still on?")
             else:
                 silent_passes = 0
+            for value in maker:
+                data = obd.read_identifier(value.module, value.identifier)
+                number = value.decode(data) if data is not None else None
+                if number is not None:
+                    samples.append((time.time(), Reading(value.key, value.name, number, value.unit, value.module)))
             voltage = elm.voltage()
             if voltage is not None:
                 samples.append(

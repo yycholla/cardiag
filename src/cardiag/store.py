@@ -52,7 +52,7 @@ _SESSION_ADDITIONS = {
     "uploaded_at": "REAL",   # when this box sent the recording to the central server
 }
 
-EMPTY_PROFILE = {"engine_litres": None, "transmission": None, "fuel": "petrol", "gears": [], "baseline": None}
+EMPTY_PROFILE = {"engine_litres": None, "transmission": None, "fuel": "petrol", "gears": [], "baseline": None, "maker": []}
 _MAX_IMPORTED_SAMPLES = 5_000_000
 
 

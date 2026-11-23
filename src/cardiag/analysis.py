@@ -511,6 +511,20 @@ def pull_times(passes: list[Pass]) -> dict:
     }
 
 
+def maker_traces(passes: list[Pass], signals: dict[str, dict]) -> list[dict]:
+    """The maker-specific values in these passes, each as a trace with its range."""
+    traces = []
+    for key in sorted({key for _, values in passes for key in values if key.startswith("22:")}):
+        points = [(t - passes[0][0], values[key]) for t, values in passes if key in values]
+        numbers = [value for _, value in points]
+        signal = signals.get(key, {"name": key, "unit": ""})
+        traces.append(
+            {"key": key, "name": signal["name"], "unit": signal["unit"], "low": _round(min(numbers)),
+             "high": _round(max(numbers)), "trace": [[_round(t, 1), _round(value)] for t, value in _thin(points, 240)]}
+        )
+    return traces
+
+
 def analyse(passes: list[Pass], signals: dict[str, dict], profile: dict, other: list[Pass] | None = None) -> dict:
     """Everything the Diagnosis and Drive pages show for one set of passes."""
     if not passes:
@@ -530,6 +544,7 @@ def analyse(passes: list[Pass], signals: dict[str, dict], profile: dict, other: 
         "pull": pull_times(passes),
         "compare": None,
         "other_pull": None,
+        "maker": maker_traces(passes, signals),
     }
     if other:
         report["compare"] = compare(passes, other, signals)

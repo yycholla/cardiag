@@ -35,6 +35,8 @@ class SimEcu:
     vin: str | None = None
     freeze_dtc: str | None = None
     freeze: dict[int, bytes] = field(default_factory=dict)
+    # Maker-specific values (service 22): identifier -> data bytes at time t.
+    extended: dict[int, Callable[[float], bytes]] = field(default_factory=dict)
 
 
 @dataclass
@@ -48,18 +50,28 @@ class SimVehicle:
     def legacy(self) -> bool:
         return self.protocol in "12345"
 
-    def respond(self, request: bytes, t: float) -> list[tuple[int, bytes]]:
-        """Replies to one request as (module, payload). Older networks get one entry per line."""
+    def respond(self, request: bytes, t: float, only: int | None = None) -> list[tuple[int, bytes]]:
+        """Replies to one request as (module, payload). Older networks get one entry per line.
+
+        `only` is the module a request was addressed to; without it every module hears the request.
+        """
         if not request:
             return []
         return [
             (ecu.address, payload)
             for ecu in self.ecus
-            for payload in self._reply(ecu, request[0], request[1:], t)
+            if only is None or ecu.address == only
+            for payload in self._reply(ecu, request[0], request[1:], t, addressed=only is not None)
         ]
 
-    def _reply(self, ecu: SimEcu, service: int, args: bytes, t: float) -> list[bytes]:
+    def _reply(self, ecu: SimEcu, service: int, args: bytes, t: float, addressed: bool = False) -> list[bytes]:
         reply = bytes([service + 0x40])
+        if service == 0x22 and len(args) >= 2:
+            identifier = int.from_bytes(args[:2], "big")
+            if identifier in ecu.extended:
+                return [reply + args[:2] + ecu.extended[identifier](t)]
+            # A module asked directly for something it does not have says so; one that merely overheard stays quiet.
+            return [bytes([0x7F, 0x22, 0x31])] if addressed else []
         if service == 0x01 and args:
             pid = args[0]
             if pid % 0x20 == 0:
@@ -235,9 +247,16 @@ def _dct_pedal(t: float) -> tuple[float, float]:
     return 0.0, 6.5
 
 
-@functools.lru_cache(maxsize=1)
 def _dct_lap() -> list[tuple[float, float, float, float]]:
-    """One lap of a drive in a geared car, as (rpm, km/h, pedal %, load %) every 0.05 s.
+    """One lap of the geared drive, as (rpm, km/h, pedal %, load %) every 0.05 s."""
+    return [state[:4] for state in _dct_states()]
+
+
+@functools.lru_cache(maxsize=1)
+def _dct_states() -> list[tuple[float, float, float, float, int, float]]:
+    """One lap of a drive in a geared car, every 0.05 s: (rpm, km/h, pedal %, load %, gear, slip rpm).
+
+    Gear counts from 1. Slip is how much faster the engine turns than the gear in use accounts for.
 
     The gearbox has two faults, both only under a heavy foot: the clutch slips in
     third gear, and the shift from second to third is slow, with the engine
@@ -273,7 +292,7 @@ def _dct_lap() -> list[tuple[float, float, float, float]]:
                 shift = {"to": gear + 1, "rpm": rpm, "done": 0.0, "takes": 1.5 if faulty else 0.4, "flare": faulty}
             elif gear > 0 and locked < 1000:
                 gear -= 1
-        table.append((rpm, speed, pedal, load))
+        table.append((rpm, speed, pedal, load, gear + 1, 0.0 if shift else max(0.0, rpm - speed * _DCT_RATIOS[gear])))
         speed = max(0.0, speed + accel * _DCT_STEP)
     return table
 
@@ -287,6 +306,22 @@ def make_focus_dct() -> SimVehicle:
     """The Focus again, driven through its gears, with a clutch that slips in third under load."""
     vehicle = _focus("focus_dct", "1FADP3F2XHL654321", _dct_drive)
     vehicle.ecus[0].live[0x49] = lambda t: _percent(_dct_lap()[int((t % _DCT_LAP) / _DCT_STEP)][2])
+
+    def state(t: float) -> tuple[float, float, float, float, int, float]:
+        return _dct_states()[int((t % _DCT_LAP) / _DCT_STEP)]
+
+    def slip(odd: bool) -> Callable[[float], bytes]:
+        # Quarter-rpm steps, signed. Each clutch reports slip only while one of its own gears is in use.
+        return lambda t: round(state(t)[5] * 4 if (state(t)[4] % 2 == 1) == odd else 0).to_bytes(2, "big", signed=True)
+
+    # The transmission's own figures. The two slip identifiers are the ones an owners' forum gives
+    # for this gearbox; the gear and temperature identifiers are invented, to give a scan more to find.
+    vehicle.ecus[1].extended = {
+        0x1EBB: slip(odd=True),
+        0x1EBC: slip(odd=False),
+        0x1E12: lambda t: bytes([state(t)[4]]),
+        0x1E1F: lambda t: _temperature(70 + state(t)[3] / 5),
+    }
     return vehicle
 
 
@@ -352,6 +387,7 @@ class SimElm:
         self.headers = False
         self.chosen = "0"  # protocol the user asked for; "0" is automatic
         self.active: str | None = None  # protocol actually in use
+        self.header: int | None = None  # the one module requests are addressed to; None means all of them
 
     def handle(self, raw: str) -> str:
         """Process one command line and return the full reply, prompt included."""
@@ -403,6 +439,11 @@ class SimElm:
         if protocol:
             self.chosen, self.active = protocol.group(1), None
             return ["OK"]
+        header = re.fullmatch(r"SH([0-9A-F]{3})", command)
+        if header:
+            address = int(header.group(1), 16)
+            self.header = None if address == 0x7DF else address
+            return ["OK"]
         if _ACCEPTED_SETTINGS.fullmatch(command):
             return ["OK"]
         return ["?"]
@@ -411,7 +452,9 @@ class SimElm:
         searching = ["SEARCHING..."] if self.active is None and self.chosen == "0" else []
         if self.vehicle is None or self.chosen not in ("0", self.vehicle.protocol):
             return searching + ["UNABLE TO CONNECT"]
-        replies = self.vehicle.respond(request, self._clock() - self._started)
+        # On CAN a module answers eight above the address it is asked on: 7E1 asks, 7E9 answers.
+        only = self.header + 8 if self.header is not None and not self.vehicle.legacy else None
+        replies = self.vehicle.respond(request, self._clock() - self._started, only)
         if not replies:
             return searching + ["NO DATA"]
         self.active = self.vehicle.protocol

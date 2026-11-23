@@ -96,6 +96,8 @@ class _Handler(BaseHTTPRequestHandler):
         elif path == "/api/central":
             uploader = self.server.uploader
             self._json({"managed": True, **uploader.status()} if uploader else {"managed": False})
+        elif path == "/api/maker":
+            self._json(garage.maker_report(hub))
         else:
             self._json({"error": "not found"}, 404)
 
@@ -156,6 +158,12 @@ class _Handler(BaseHTTPRequestHandler):
             )
         elif path == "/api/central":
             self._job(lambda: self._central(body))
+        elif path == "/api/maker/values":
+            self._job(lambda: garage.save_maker(hub, self.server.db_path, body))
+        elif path == "/api/maker/scan":
+            self._job(lambda: garage.scan(hub, body))
+        elif path == "/api/interval":
+            self._job(lambda: garage.set_interval(hub, self.server.db_path, body.get("seconds")))
         elif path == "/api/ingest" and self.server.accept_uploads:
             self._job(lambda: self._ingest(body))
         else:

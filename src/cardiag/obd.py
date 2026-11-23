@@ -14,6 +14,7 @@ from .frames import Message, parse_can, parse_legacy
 from .pids import PIDS, Value
 
 DTC_SERVICES = {"stored": 0x03, "pending": 0x07, "permanent": 0x0A}
+_EVERY_MODULE = "7DF"  # the 11-bit CAN address that all modules listen on
 
 
 @dataclass(frozen=True)
@@ -111,6 +112,7 @@ class Obd:
         self.protocol: BusProtocol | None = None
         self.ecus: list[int] = []
         self._supported: dict[int, dict[int, set[int]]] = {}
+        self._header: str | None = None  # the module requests are addressed to; None means all of them
 
     def connect(self) -> BusProtocol:
         """Find the vehicle's network and note which modules answer."""
@@ -133,6 +135,7 @@ class Obd:
 
     def _query(self, service: int, *params: int) -> list[Message]:
         """Send a request and return the positive replies to it, ordered by module."""
+        self._address(None)
         try:
             lines = self.elm.request(bytes([service, *params]).hex().upper())
         except NoData:
@@ -145,6 +148,34 @@ class Obd:
             and (not params or message.data[1] == params[0])
         ]
         return sorted(replies, key=lambda message: message.ecu)
+
+    def _address(self, header: str | None) -> None:
+        if header != self._header:
+            self.elm.set_header(header or _EVERY_MODULE)
+            self._header = header
+
+    @property
+    def maker_values(self) -> bool:
+        """Whether maker-specific values can be read here. Only 11-bit CAN is handled so far."""
+        return self.protocol is not None and self.protocol.family == "can" and self.protocol.id_bits == 11
+
+    def read_identifier(self, module: int, identifier: int) -> bytes | None:
+        """One maker-specific value (service 22, a read) from one module, or None if it has no such value.
+
+        `module` is the address the module answers from, such as 0x7E9 for the transmission.
+        """
+        if not self.maker_values:
+            raise ValueError("maker-specific values can only be read on an 11-bit CAN network so far")
+        self._address(f"{module - 8:03X}")
+        try:
+            lines = self.elm.request(f"22{identifier:04X}")
+        except NoData:
+            return None
+        wanted = bytes([0x62]) + identifier.to_bytes(2, "big")
+        for message in self._parse(lines):
+            if message.ecu == module and message.data[:3] == wanted:
+                return bytes(message.data[3:])
+        return None  # a refusal (7F 22 ..), which is how a module says it has no such value
 
     def supported_pids(self, service: int = 0x01) -> dict[int, set[int]]:
         """Which parameters each module offers, for live data (01) or freeze frame (02)."""
