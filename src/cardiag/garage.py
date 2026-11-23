@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import time
 
-from . import analysis, maker
+from . import analysis, discover, maker
 from .pids import PIDS
 from .service import Hub
 from .store import Store
@@ -193,6 +193,76 @@ def scan(hub: Hub, body: dict) -> dict:
         "found": [{"id": f"{identifier:04X}", "data": data.hex().upper()} for identifier, data in found],
         "next": f"{first + count:04X}" if first + count < 0x10000 else None,
     }
+
+
+def _run_json(row) -> dict:
+    return {
+        "id": row["id"], "started_at": row["started_at"], "ended_at": row["ended_at"], "vin": row["vin"],
+        "module": row["module"], "note": row["note"], "identifiers": row["identifiers"], "readings": row["readings"],
+        "seconds": round(row["seconds"] or 0.0, 1),
+    }
+
+
+def discoveries(hub: Hub, db_path: str | None) -> dict:
+    """Every discovery run kept here, and the one in progress if there is one."""
+    store = Store(db_path)
+    try:
+        runs = [_run_json(row) for row in store.discoveries()]
+    finally:
+        store.close()
+    return {"active": hub.status()["discovery"], "runs": runs, **hub.modules()}
+
+
+def change_discovery(hub: Hub, db_path: str | None, body: dict) -> dict:
+    action = body.get("action")
+    if action == "stop":
+        hub.stop_discovery()
+        return discoveries(hub, db_path)
+    if action != "start":
+        raise ValueError("action must be 'start' or 'stop'")
+    module = maker.module_address(body.get("module"))
+    known = None
+    first = count = 0
+    reuse = body.get("reuse")
+    if reuse not in (None, ""):
+        store = Store(db_path)
+        try:
+            _, samples, _ = store.discovery(int(reuse))
+        except (TypeError, ValueError):
+            raise ValueError("reuse must be the number of an earlier run") from None
+        except KeyError:
+            raise ValueError(f"there is no discovery run {reuse}") from None
+        finally:
+            store.close()
+        known = sorted(samples)
+        if not known:
+            raise ValueError(f"run {reuse} found no identifiers to read again")
+    else:
+        first = maker.hex_number(body.get("first"), 4, "the first identifier")
+        count = body.get("count", 256)
+        if isinstance(count, bool) or not isinstance(count, int) or not 1 <= count <= 8192:
+            raise ValueError("count must be between 1 and 8192")
+    note = body.get("note")
+    if note is not None and (not isinstance(note, str) or len(note) > 120):
+        raise ValueError("the note must be at most 120 characters")
+    hub.start_discovery(module, first, count, known=known, note=note)
+    return discoveries(hub, db_path)
+
+
+def discovery_report(db_path: str | None, number: int) -> dict:
+    """One run, ranked: which bytes moved, and what each moved with."""
+    store = Store(db_path)
+    try:
+        run, samples, context = store.discovery(number)
+        result = discover.rank(samples, context, store.profile(run["vin"])["gears"])
+    finally:
+        store.close()
+    result["run"] = {
+        "id": run["id"], "module": run["module"], "vin": run["vin"], "note": run["note"],
+        "started_at": run["started_at"], "ended_at": run["ended_at"],
+        "seconds": round(max((readings[-1][0] for readings in samples.values()), default=0.0), 1),
+    }
+    return result
 
 
 def set_interval(hub: Hub, db_path: str | None, seconds: object) -> dict:

@@ -35,8 +35,9 @@ Three simulated vehicles are built in:
 `focus_dct` repeats a 150-second lap: a gentle run up through the gears, then a
 hard one. Under the hard run third gear slips and the shift from second to
 third is slow. Its gear ratios are invented. Its transmission module also
-answers four maker-specific identifiers, for trying the scanner: clutch slip at
-the two the forum lead names, and a gear and a temperature at invented ones.
+answers six maker-specific identifiers, for trying the scanner and a discovery
+run: clutch slip at the two the forum lead names, and at invented ones a gear,
+a temperature, a shaft speed behind a status byte, and one that never changes.
 
 ## Use it with the adapter
 
@@ -116,6 +117,20 @@ traced on the Drive tab.
 To find them, "Find what a module answers" asks a module for a run of
 identifiers and lists the ones it has, with their bytes. Scan, change one thing
 on the car, scan again, and the page marks which bytes moved.
+
+To map a module properly, use a discovery run from the same step. It asks
+through a range of identifiers once, then keeps reading every one that answered
+for as long as you drive, storing the raw bytes beside engine speed, road speed
+and the pedal. "What moved" then tries each byte, and each pair of bytes, as a
+number, and ranks how closely it followed the gear and clutch slip worked out
+from the ratio, the speeds, the pedal, the coolant and time. A later run can
+read the same identifiers again without asking through the range. Every run can
+be downloaded as CSV.
+
+What a run cannot do: with many identifiers, each is read every few seconds, so
+it suits gears and temperatures, not shudder. Its findings are likenesses, not
+definitions: scale and offset still have to be worked out from values you can
+check. Learn the gears first (step 5), or nothing can be compared with them.
 
 Two leads for the Ford dual-clutch gearbox are offered as a starting point:
 clutch A and clutch B slip, at 1EBB and 1EBC on the transmission module. They
@@ -220,7 +235,7 @@ To publish a release, change `__version__` in `src/cardiag/__init__.py`, merge
 that to `main`, and only then tag it with the same number:
 
 ```sh
-gh release create v0.5.0 --target main --generate-notes
+gh release create v0.6.0 --target main --generate-notes
 ```
 
 A release whose tag and `__version__` disagree is refused by the Pi. So is one
@@ -267,6 +282,7 @@ QuickJS (`qjs`) and is skipped without one. It checks behaviour, not layout.
 | `src/cardiag/garage.py` | Per-car setup, and reports for the live car or a recording |
 | `src/cardiag/sync.py` | Sending recordings to a central server |
 | `src/cardiag/maker.py` | Definitions of maker-specific values, and turning their bytes into numbers |
+| `src/cardiag/discover.py` | Ranks what the bytes captured in a discovery run moved with |
 | `src/cardiag/service.py` | Background worker that owns the adapter and retries the connection |
 | `src/cardiag/web.py` | Web server: JSON endpoints and a live event stream |
 | `src/cardiag/web/index.html` | The web page |

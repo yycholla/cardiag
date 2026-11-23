@@ -132,8 +132,8 @@ def test_maker_values_are_recorded_and_traced(served):
 def test_scanning_finds_what_a_module_has(served):
     geared(served)
     status, first = served.request("/api/maker/scan", {"module": "7E9", "first": "1E00", "count": 64})
-    assert status == 200 and [found["id"] for found in first["found"]] == ["1E12", "1E1F"] and first["next"] == "1E40"
-    assert len(first["found"][0]["data"]) == 2  # one byte, as hex
+    assert status == 200 and [found["id"] for found in first["found"]] == ["1E01", "1E12", "1E1F", "1E30"] and first["next"] == "1E40"
+    assert first["found"][1]["data"] in ("01", "02")  # one byte, as hex: the gear, early in the lap
     status, later = served.request("/api/maker/scan", {"module": "7E9", "first": "1E80", "count": 64})
     assert [found["id"] for found in later["found"]] == ["1EBB", "1EBC"]
     status, engine = served.request("/api/maker/scan", {"module": "7E8", "first": "1E00", "count": 64})

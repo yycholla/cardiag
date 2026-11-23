@@ -346,6 +346,7 @@
               <input id="maker-unit" type="text" maxlength="12" placeholder="Unit" aria-label="Unit">
             </div>
             <div class="toolbar">
+              <select id="maker-start" aria-label="Where the number starts"></select>
               <select id="maker-size" aria-label="Number of bytes"></select>
               <label class="check"><input id="maker-signed" type="checkbox">Can be negative</label>
               <input id="maker-scale" type="text" inputmode="decimal" placeholder="Multiply by (1)" aria-label="Multiply by">
@@ -362,6 +363,17 @@
               <span class="secondary small" id="scan-note"></span>
             </div>
             <div id="scan-results"></div>
+            <h3>Capture everything through a drive</h3>
+            <p class="secondary small">A discovery run keeps the raw bytes of every identifier the module answers, read in turn for as long as you drive, beside engine speed, road speed and the pedal. Afterwards it ranks which bytes moved with the gear, with clutch slip, with heat and so on. Start it parked: it first asks through the range above, which takes a few minutes for a wide one, then keeps reading what answered. While it runs, the Live tab shows only the few values it needs.</p>
+            <div class="toolbar">
+              <select id="discover-reuse" aria-label="What to read"></select>
+              <select id="discover-count" aria-label="How many identifiers to ask"></select>
+              <button class="primary" id="discover-start">Start a discovery run</button>
+            </div>
+            <div class="status" id="discover-state"></div>
+            <p class="secondary small" id="discover-note"></p>
+            <div id="discover-runs"></div>
+            <div id="discover-report"></div>
           </div>
         </div>
         <div class="card">
@@ -568,6 +580,7 @@ function showStatus(status) {
   $("record").disabled = status.state !== "connected";
   $("capture").disabled = status.state !== "connected";
   showInterval(status);
+  showDiscovery(status.discovery);
   $("note").hidden = Boolean(recording);
   $("record-status").textContent = recording
     ? "Recording " + recording.session + " · " + fmtDuration(recording.seconds)
@@ -766,6 +779,8 @@ function clearReports() {
   maker = null;
   scanning = false;
   lastScan.clear();
+  $("discover-runs").replaceChildren();
+  $("discover-report").replaceChildren();
   $("scan-results").replaceChildren();
   $("scan-note").textContent = "";
   $("codes").replaceChildren();
@@ -1752,10 +1767,12 @@ function showMaker(found) {
   const chosen = $("maker-module").value;
   fillSelect($("maker-module"), found.modules.map((module) => [module.reply, module.name]));
   if (!chosen && gearbox) $("maker-module").value = gearbox.reply;
+  fillSelect($("maker-start"), [["0", "From the first byte"], ["1", "Skip 1 byte"], ["2", "Skip 2 bytes"], ["3", "Skip 3 bytes"],
+    ["4", "Skip 4 bytes"], ["5", "Skip 5 bytes"], ["6", "Skip 6 bytes"], ["7", "Skip 7 bytes"]]);
   fillSelect($("maker-size"), [["1", "1 byte"], ["2", "2 bytes"], ["3", "3 bytes"], ["4", "4 bytes"]]);
   fillSelect($("scan-count"), [["64", "64 identifiers"], ["256", "256 identifiers"], ["1024", "1,024 identifiers"], ["4096", "4,096 identifiers"]]);
 
-  const rule = (value) => value.size + (value.size === 1 ? " byte" : " bytes") + (value.signed ? ", can be negative" : "")
+  const rule = (value) => (value.start ? "skip " + value.start + ", then " : "") + value.size + (value.size === 1 ? " byte" : " bytes") + (value.signed ? ", can be negative" : "")
     + ", times " + value.scale + (value.offset ? (value.offset > 0 ? ", plus " : ", minus ") + Math.abs(value.offset) : "");
   $("maker-values").replaceChildren(found.values.length
     ? table(["Name", "Module", "Identifier", "Rule", "Unit", ""], found.values.map((value) => el("tr", null,
@@ -1785,7 +1802,7 @@ async function addMaker() {
   const number = (id, otherwise) => ($(id).value.trim() === "" ? otherwise : Number($(id).value));
   const added = await saveMaker(maker.values.concat([{
     module: $("maker-module").value, id: $("maker-id").value.trim().toUpperCase(), name: $("maker-name").value,
-    unit: $("maker-unit").value, size: Number($("maker-size").value), signed: $("maker-signed").checked,
+    unit: $("maker-unit").value, start: Number($("maker-start").value) || 0, size: Number($("maker-size").value), signed: $("maker-signed").checked,
     scale: number("maker-scale", 1), offset: number("maker-offset", 0),
   }]));
   if (added) for (const id of ["maker-id", "maker-name", "maker-unit", "maker-scale", "maker-offset"]) $(id).value = "";
@@ -1842,6 +1859,105 @@ async function runScan() {
   $("scan-start").textContent = "Scan";
   $("scan-note").textContent = failure || (found.length + " of " + asked + " identifiers answered");
   for (const item of found) lastScan.set(module + ":" + item.id, item.data);
+}
+
+/* ---- setup: a discovery run ------------------------------------------------------------- */
+
+let discoveryOn = false;  // whether a run was going at the last status, to notice when one ends
+
+function spaced(hex) {
+  return hex.replace(/(..)/g, "$1 ").trim();
+}
+
+function showDiscovery(progress) {
+  $("discover-start").textContent = progress ? "Stop the discovery run" : "Start a discovery run";
+  let words = "";
+  if (progress && progress.phase === "scanning") {
+    words = "Run " + progress.id + ": asking the module what it has, " + progress.asked.toLocaleString("en-US") + " of "
+      + progress.range.toLocaleString("en-US") + " identifiers, " + progress.found + " found so far";
+  } else if (progress) {
+    words = "Run " + progress.id + ": reading " + progress.found + " identifiers in turn, "
+      + progress.readings.toLocaleString("en-US") + " readings over " + fmtDuration(progress.seconds) + ". Drive, then stop the run.";
+  }
+  $("discover-state").textContent = words;
+  if (discoveryOn && !progress && activeTab === "setup") loadDiscoveries();  // one just ended: list it
+  discoveryOn = Boolean(progress);
+}
+
+async function loadDiscoveries() {
+  const epoch = reportEpoch;
+  const result = await api("/api/discoveries");
+  if (epoch !== reportEpoch) return;
+  if (result.error) $("discover-note").textContent = capital(result.error) + ".";
+  else showDiscoveries(result);
+}
+
+function showDiscoveries(found) {
+  const usable = found.runs.filter((run) => run.identifiers > 0).reverse();
+  fillSelect($("discover-reuse"), [["", "Ask through the range above first"], ...usable.map((run) =>
+    [String(run.id), "Read again the " + run.identifiers + " identifiers run " + run.id + " found"])]);
+  fillSelect($("discover-count"), [["256", "256 identifiers"], ["1024", "1,024 identifiers"], ["4096", "4,096 identifiers"], ["8192", "8,192 identifiers"]]);
+  $("discover-runs").replaceChildren(found.runs.length ? table(["Run", "Started", "Module", "#Identifiers", "#Readings", "#Length", "", ""],
+    found.runs.slice().reverse().map((run) => el("tr", null,
+      td(run.id + (run.note ? ": " + run.note : "")), td(new Date(run.started_at * 1000).toLocaleString()), td(run.module, "mono"),
+      td(fmt(run.identifiers), "n"), td(fmt(run.readings), "n"), td(run.ended_at === null ? "running" : fmtDuration(run.seconds), "n"),
+      td(el("button", { class: "quiet slim", onclick: () => openDiscovery(run.id) }, "What moved")),
+      td(el("a", { href: "/api/discoveries/" + run.id + ".csv", download: "" }, "Raw bytes, CSV")))))
+    : el("p", { class: "secondary small" }, "No discovery runs yet."));
+}
+
+async function toggleDiscovery() {
+  const running = current && current.discovery;
+  const request = running ? { action: "stop" } : {
+    action: "start", module: $("maker-module").value, first: ($("scan-first").value.trim() || "1E00").toUpperCase(),
+    count: Number($("discover-count").value) || 256, reuse: $("discover-reuse").value ? Number($("discover-reuse").value) : null,
+  };
+  const result = await api("/api/discover", request);
+  $("discover-note").textContent = result.error ? capital(result.error) + "." : "";
+  if (result.error) return;
+  showDiscovery(result.active);
+  showDiscoveries(result);
+}
+
+async function openDiscovery(number) {
+  const epoch = reportEpoch;
+  $("discover-report").replaceChildren(el("p", { class: "secondary small" }, "Working out what moved…"));
+  const result = await api("/api/discoveries/" + number);
+  if (epoch !== reportEpoch) return;
+  if (result.error) {
+    $("discover-report").replaceChildren(problem(capital(result.error)));
+    return;
+  }
+  const where = (reading) => (reading.size === 1 ? "byte " + (reading.start + 1)
+    : "bytes " + (reading.start + 1) + " to " + (reading.start + reading.size)) + (reading.signed ? ", can be negative" : "");
+  const rows = result.moving.flatMap((item) => item.readings_of.map((reading, i) => el("tr", null,
+    td(i ? "" : item.id, "mono"), td(i ? "" : spaced(item.last), "mono"), td(where(reading)),
+    td(fmt(reading.low) + " to " + fmt(reading.high), "n"),
+    td(reading.moves_with.map((likeness) => likeness.what + " " + likeness.likeness.toFixed(2)).join(", "), "wrap"),
+    td(reading.guess, "wrap"),
+    td(el("button", {
+      class: "quiet slim",
+      onclick: () => {
+        $("maker-id").value = item.id;
+        $("maker-start").value = String(reading.start);
+        $("maker-size").value = String(reading.size);
+        $("maker-signed").checked = reading.signed;
+        $("maker-note").textContent = "Taken from run " + number + ". Give it a name, a unit and a scale under Add a value, then press Add.";
+      },
+    }, "Use")))));
+  $("discover-report").replaceChildren(...[
+    el("h3", null, "Run " + result.run.id + ": what moved over " + fmtDuration(result.run.seconds)),
+    result.gears_known ? null : el("p", { class: "secondary small" },
+      "Gears have not been learned for this car, so nothing here could be compared with the gear or with clutch slip. Learn them in step 5 and open the run again."),
+    result.moving.length ? table(["Identifier", "Bytes at the end", "Read as", "#Range", "Moves with", "What it looks like", ""], rows)
+      : el("p", { class: "secondary small" }, "Nothing changed during this run."),
+    result.still.length ? el("p", { class: "secondary small" }, result.still.length
+      + (result.still.length === 1 ? " identifier answered but never changed: " : " identifiers answered but never changed: ")
+      + result.still.map((item) => item.id + " (" + spaced(item.last) + ")").join(", ") + ".") : null,
+    reading("Likeness runs from 0 to 1: how closely a number followed something already known, as a correlation. "
+      + "These are leads. A number that follows the gear exactly is easy to trust; one that follows the pedal may be many things. "
+      + "Scale and offset still have to be worked out from values you can check."),
+  ].filter(Boolean));  // the notes above are only there when they apply
 }
 
 /* ---- settings: polling ----------------------------------------------------------------- */
@@ -1917,6 +2033,7 @@ function loadCarTab() {
   if (activeTab === "setup") {
     loadSetup();
     loadMaker();
+    loadDiscoveries();
     loadReportSources();
   }
 }
@@ -1952,6 +2069,7 @@ $("uplink-forget").addEventListener("click", () => changeNetwork({ action: "forg
 $("interval").addEventListener("change", changeInterval);
 $("maker-add").addEventListener("click", addMaker);
 $("scan-start").addEventListener("click", runScan);
+$("discover-start").addEventListener("click", toggleDiscovery);
 $("central-save").addEventListener("click", saveCentral);
 $("central-send").addEventListener("click", sendCentral);
 $("report-refresh").addEventListener("click", loadReport);
