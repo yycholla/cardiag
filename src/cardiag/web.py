@@ -2,6 +2,10 @@
 
 It uses only the standard library, so the box in the car needs nothing beyond
 Python and pyserial. There is no login: run it on networks you trust.
+
+Besides the car, the page can switch to a simulated vehicle, and on the box in
+the car it can manage the box's Wi-Fi and install updates. Those two are only
+offered when the server was started with them (see `cardiag serve --help`).
 """
 
 from __future__ import annotations
@@ -9,14 +13,18 @@ from __future__ import annotations
 import io
 import json
 import re
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from . import __version__
 from .elm import AdapterError
 from .frames import FrameError
+from .network import NetworkError, Wifi
 from .service import Hub, NotConnected
 from .store import Store
+from .update import UpdateError, Updater
 
 _STATIC = Path(__file__).parent / "web"
 _KEEP_ALIVE_SECONDS = 10
@@ -26,6 +34,14 @@ class _Server(ThreadingHTTPServer):
     daemon_threads = True
     hub: Hub
     db_path: str | None
+    wifi: Wifi | None
+    updater: Updater | None
+    restarting = False  # set when the server was stopped so that a new version can start
+
+    def restart_soon(self) -> None:
+        """Stop serving once the current reply has gone out; whoever runs the app starts it again."""
+        self.restarting = True
+        threading.Timer(1.0, self.shutdown).start()
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -57,12 +73,25 @@ class _Handler(BaseHTTPRequestHandler):
             self._json(self._sessions())
         elif match := re.fullmatch(r"/api/sessions/(\d+)\.csv", path):
             self._session_csv(int(match.group(1)))
+        elif path == "/api/network":
+            wifi = self.server.wifi
+            self._job(wifi.status if wifi else lambda: {"managed": False})
+        elif path == "/api/network/scan":
+            self._job(lambda: {"networks": self._wifi().scan()})
+        elif path == "/api/update":
+            updater = self.server.updater
+            self._json(updater.status() if updater else {"managed": False, "current": __version__})
         else:
             self._json({"error": "not found"}, 404)
 
     def do_POST(self) -> None:
         path = urlsplit(self.path).path
         hub = self.server.hub
+        # Browsers only send JSON across sites after asking permission, which this server
+        # never gives. Insisting on it keeps other web pages from pressing these buttons.
+        if not self.headers.get("Content-Type", "").lower().startswith("application/json"):
+            self._json({"error": "the request body must be sent as application/json"}, 415)
+            return
         try:
             length = int(self.headers.get("Content-Length") or 0)
             body = json.loads(self.rfile.read(length) or b"{}")
@@ -86,8 +115,48 @@ class _Handler(BaseHTTPRequestHandler):
                 self._job(hub.stop_recording)
             else:
                 self._json({"error": "action must be 'start' or 'stop'"}, 400)
+        elif path == "/api/simulation":
+            self._job(lambda: hub.set_simulation(body.get("vehicle")))
+        elif path == "/api/network":
+            self._job(lambda: self._change_network(body))
+        elif path == "/api/update":
+            self._job(lambda: self._update(body.get("action")))
         else:
             self._json({"error": "not found"}, 404)
+
+    # ---- the box itself -------------------------------------------------------
+
+    def _wifi(self) -> Wifi:
+        if self.server.wifi is None:
+            raise ValueError("Wi-Fi is not managed from this page on this machine")
+        return self.server.wifi
+
+    def _change_network(self, body: dict) -> dict:
+        wifi = self._wifi()
+        action = body.get("action")
+        if action == "save":
+            wifi.save(body.get("ssid"), body.get("password"))
+        elif action == "join":
+            wifi.join()
+        elif action == "hotspot":
+            wifi.use_hotspot()
+        elif action == "forget":
+            wifi.forget()
+        else:
+            raise ValueError("action must be 'save', 'join', 'hotspot' or 'forget'")
+        return wifi.status()
+
+    def _update(self, action: object) -> dict:
+        updater = self.server.updater
+        if updater is None:
+            raise ValueError("updates are not installed from this page on this machine")
+        if action == "check":
+            return updater.check()
+        if action == "install":
+            result = updater.install()
+            self.server.restart_soon()
+            return result
+        raise ValueError("action must be 'check' or 'install'")
 
     # ---- responses ----------------------------------------------------------
 
@@ -112,7 +181,7 @@ class _Handler(BaseHTTPRequestHandler):
             self._json({"error": str(exc) or "not connected to a vehicle"}, 503)
         except ValueError as exc:
             self._json({"error": str(exc)}, 400)
-        except (AdapterError, FrameError) as exc:
+        except (AdapterError, FrameError, NetworkError, UpdateError) as exc:
             self._json({"error": str(exc)}, 502)
         except TimeoutError:
             self._json({"error": "the car took too long to answer"}, 504)
@@ -175,8 +244,18 @@ class _Handler(BaseHTTPRequestHandler):
         )
 
 
-def make_server(hub: Hub, host: str, port: int, db_path: str | None = None) -> ThreadingHTTPServer:
+def make_server(
+    hub: Hub,
+    host: str,
+    port: int,
+    db_path: str | None = None,
+    *,
+    wifi: Wifi | None = None,
+    updater: Updater | None = None,
+) -> _Server:
     server = _Server((host, port), _Handler)
     server.hub = hub
     server.db_path = db_path
+    server.wifi = wifi
+    server.updater = updater
     return server

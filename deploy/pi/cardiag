@@ -1,0 +1,27 @@
+#!/bin/sh
+# Starts the installed copy of cardiag. Installed as /usr/local/bin/cardiag.
+#
+# The app lives in $home/releases/<version>, and $home/current points at the
+# version in use. Installing an update from the web page repoints "current" and
+# leaves the file "pending" until the new version has run for a few seconds.
+# If the service has to start a second time with "pending" still there, the new
+# version did not come up, so this goes back to the previous one.
+home=${CARDIAG_HOME:-/opt/cardiag}
+
+if [ -n "${CARDIAG_SERVICE:-}" ] && [ -e "$home/pending" ]; then
+    if [ -e "$home/pending.tried" ] && [ -L "$home/previous" ]; then
+        failed=$(cat "$home/pending")
+        rm -f "$home/.current.new"
+        ln -s "$(readlink "$home/previous")" "$home/.current.new" &&
+            mv -T "$home/.current.new" "$home/current"
+        printf '%s\n' "$failed" > "$home/rolled-back"
+        rm -f "$home/pending" "$home/pending.tried"
+        echo "cardiag: version $failed did not start; back on $(basename "$(readlink "$home/current")")" >&2
+    else
+        : > "$home/pending.tried"
+    fi
+fi
+
+# pyserial comes from $home/vendor when the box was set up without internet access.
+export PYTHONPATH="$home/current/src:$home/vendor"
+exec /usr/bin/python3 -m cardiag "$@"

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import socket
 import sys
+import threading
 import time
 from contextlib import contextmanager
 from datetime import datetime
@@ -13,16 +14,20 @@ from typing import IO, Iterator
 import serial
 from serial.tools import list_ports
 
+from . import __version__
 from .elm import AdapterError, AdapterInfo, Elm327, NoVehicle
+from .network import Wifi
 from .frames import FrameError
 from .obd import DTC_SERVICES, Obd, Reading, ecu_label
 from .service import DEFAULT_LIVE_PIDS, Hub
 from .sim import VEHICLES, PtyAdapter, SimElm, SimTransport
 from .store import Store
 from .transport import LinkError, SerialTransport
+from .update import Updater
 from .web import make_server
 
 _FTDI_VENDOR_ID = 0x0403  # the USB chip in the OBDLink EX and most USB adapters
+_CONFIRM_AFTER_SECONDS = 10
 
 
 def _likely_adapters() -> list:
@@ -309,19 +314,19 @@ def _lan_address() -> str | None:
 
 
 def cmd_serve(args: argparse.Namespace) -> int:
-    if args.sim:
-        vehicle = VEHICLES[args.sim]()
+    def open_transport():
+        return SerialTransport(args.port or find_port(), args.baud)
 
-        def open_transport():
-            return SimTransport(SimElm(vehicle))
-    else:
+    # One of each simulated vehicle for as long as the server runs, so switching away
+    # and back finds the same car. The page can swap between these and the adapter.
+    vehicles = {name: make() for name, make in VEHICLES.items()}
+    simulators = {name: (lambda v=vehicle: SimTransport(SimElm(v))) for name, vehicle in vehicles.items()}
 
-        def open_transport():
-            return SerialTransport(args.port or find_port(), args.baud)
-
-    hub = Hub(open_transport, db_path=args.db, interval=args.interval)
+    hub = Hub(open_transport, db_path=args.db, interval=args.interval, simulators=simulators, simulation=args.sim)
+    wifi = Wifi() if args.manage_wifi else None
+    updater = Updater(args.update_dir) if args.update_dir else None
     try:
-        server = make_server(hub, args.host, args.web_port, args.db)
+        server = make_server(hub, args.host, args.web_port, args.db, wifi=wifi, updater=updater)
     except OSError as exc:
         print(f"error: cannot listen on {args.host}:{args.web_port}: {exc}", file=sys.stderr)
         return 1
@@ -333,15 +338,29 @@ def cmd_serve(args: argparse.Namespace) -> int:
         print(f"From a phone or tablet on the same network, open {where}")
     else:
         print(f"Serving at http://{args.host}:{port}  (add --host 0.0.0.0 to reach it from other devices)")
-    print("Ctrl-C to stop.")
+    print("Ctrl-C to stop.", flush=True)
     hub.start()
+    if wifi:
+        wifi.start()
+    confirm = None
+    if updater:
+        # Still running after a few seconds: an update that was just installed is sound.
+        confirm = threading.Timer(_CONFIRM_AFTER_SECONDS, updater.confirm)
+        confirm.daemon = True
+        confirm.start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
+        if confirm:
+            confirm.cancel()
         server.server_close()
         hub.stop()
+        if wifi:
+            wifi.stop()
+    if server.restarting:
+        print("Stopping so that the new version can start.", flush=True)
     return 0
 
 
@@ -362,6 +381,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cardiag", description="Car diagnostics over OBD-II.", parents=[_connection_options(None)]
     )
+    parser.add_argument("--version", action="version", version=f"cardiag {__version__}")
     commands = parser.add_subparsers(dest="command", metavar="command", required=True)
     after_command = _connection_options(argparse.SUPPRESS)
 
@@ -391,6 +411,8 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--host", default="127.0.0.1", help="address to listen on (default 127.0.0.1; use 0.0.0.0 for other devices)")
     serve.add_argument("--web-port", type=int, default=8000, help="port for the web interface (default 8000)")
     serve.add_argument("--interval", type=float, default=0.25, help="minimum seconds between updates (default 0.25)")
+    serve.add_argument("--manage-wifi", action="store_true", help="let the page switch this machine between its hotspot and a Wi-Fi network (for the box in the car; needs NetworkManager)")
+    serve.add_argument("--update-dir", metavar="DIR", help="let the page install new releases into DIR, where this copy was installed (for the box in the car)")
 
     add("ports", cmd_ports, "list serial ports and flag likely OBD adapters")
     serve = add("sim-serve", cmd_sim_serve, "run a simulated adapter as a serial device for testing")

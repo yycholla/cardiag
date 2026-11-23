@@ -80,7 +80,15 @@
     border: 0; border-radius: 8px; background: var(--button);
     color: #fff; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
   }
+  button.quiet {
+    display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+    color: var(--ink); font: inherit; font-weight: 600; cursor: pointer;
+  }
   button:disabled { opacity: 0.45; cursor: default; }
+  .card .toolbar { margin-top: 10px; }
+  .card p { margin: 8px 0 0; }
+  .notes { white-space: pre-wrap; overflow-wrap: anywhere; }
   .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   .toolbar input {
     flex: 1 1 180px; min-height: 44px; padding: 0 12px;
@@ -141,6 +149,7 @@
     <button role="tab" id="tab-codes" aria-selected="false">Codes</button>
     <button role="tab" id="tab-readiness" aria-selected="false">Readiness</button>
     <button role="tab" id="tab-sessions" aria-selected="false">Recordings</button>
+    <button role="tab" id="tab-settings" aria-selected="false">Settings</button>
   </nav>
 
   <main>
@@ -172,6 +181,51 @@
     <section id="panel-sessions" hidden>
       <div id="sessions"></div>
     </section>
+
+    <section id="panel-settings" hidden>
+      <div class="card">
+        <h3>Data source</h3>
+        <div id="source-state"></div>
+        <div class="toolbar" id="sources"></div>
+        <p class="secondary small">A simulated car shows made-up data, for trying the app without a car. The app goes back to the real car whenever it restarts.</p>
+      </div>
+
+      <div class="card" id="wifi-card" hidden>
+        <h3>Wi-Fi</h3>
+        <div id="wifi-state"></div>
+        <div id="wifi-saved" hidden>
+          <div class="toolbar">
+            <button class="primary" id="wifi-join">Join</button>
+            <button class="primary" id="wifi-hotspot">Switch back to the hotspot</button>
+            <button class="quiet" id="wifi-forget">Forget this network</button>
+          </div>
+        </div>
+        <div id="wifi-form" hidden>
+          <p class="secondary small">Save a Wi-Fi network to put this box on it when you ask, for example to install updates at home. The hotspot still starts every time the box is switched on.</p>
+          <div class="toolbar">
+            <button class="quiet" id="wifi-scan">Find networks</button>
+          </div>
+          <div class="toolbar" id="wifi-networks"></div>
+          <div class="toolbar">
+            <input id="wifi-ssid" type="text" maxlength="32" autocapitalize="off" autocomplete="off" placeholder="Network name" aria-label="Network name">
+            <input id="wifi-password" type="password" maxlength="63" autocomplete="off" placeholder="Password" aria-label="Wi-Fi password">
+            <button class="primary" id="wifi-save">Save</button>
+          </div>
+        </div>
+        <p class="secondary small" id="wifi-note"></p>
+      </div>
+
+      <div class="card">
+        <h3>Software</h3>
+        <div class="status" id="update-version"></div>
+        <div id="update-state"></div>
+        <p class="secondary small notes" id="update-notes"></p>
+        <div class="toolbar">
+          <button class="quiet" id="update-check" hidden>Check for updates</button>
+          <button class="primary" id="update-install" hidden>Install update</button>
+        </div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -187,7 +241,9 @@ const SPARK_H = 32;
 const SPARK_PLOT_W = 96;   // leaves room at the right edge for the latest-point dot
 const SPARK_PAD = 5;
 const GLYPH = { good: "✓", warning: "!", critical: "✕" };
-const TABS = ["live", "codes", "readiness", "sessions"];
+const TABS = ["live", "codes", "readiness", "sessions", "settings"];
+const VEHICLE_NAMES = { focus: "Ford Focus", tahoe: "Chevrolet Tahoe" };
+const NETWORK_POLL_MS = 3000;
 const KINDS = [["stored", "Stored"], ["pending", "Pending"], ["permanent", "Permanent"]];
 
 const $ = (id) => document.getElementById(id);
@@ -244,6 +300,8 @@ async function api(path, body) {
 
 let current = null;      // latest status from the server
 let lastState = null;
+let lastSource = null;   // which car the values come from: "" for the adapter, else a simulated vehicle
+let pageVersion = null;  // app version this page was loaded from
 
 function showLink(kind, glyph, text, detail) {
   $("link-icon").setAttribute("class", "icon " + kind);
@@ -254,9 +312,16 @@ function showLink(kind, glyph, text, detail) {
 
 function showStatus(status) {
   current = status;
+  if (pageVersion === null) pageVersion = status.version;
+  else if (status.version !== pageVersion) {
+    location.reload();  // the app was updated underneath this page
+    return;
+  }
+  const simulated = status.simulation ? "Simulated " + vehicleName(status.simulation) : null;
   if (status.state === "connected") {
     const facts = [status.vin ? "VIN " + status.vin : null, status.network, status.modules.join(", ")];
-    showLink("good", GLYPH.good, "Connected", facts.filter(Boolean).join(" · "));
+    if (simulated) facts.unshift(simulated + ", made-up data");
+    showLink("good", GLYPH.good, simulated ? "Simulation" : "Connected", facts.filter(Boolean).join(" · "));
   } else if (status.state === "no_vehicle") {
     showLink("warning", GLYPH.warning, "Waiting for the car", status.message);
   } else if (status.state === "no_adapter") {
@@ -273,10 +338,17 @@ function showStatus(status) {
     ? "Recording " + recording.session + " · " + fmtDuration(recording.seconds)
     : "";
 
-  if (status.state !== lastState) {
+  const source = status.simulation || "";
+  if (status.state !== lastState || source !== lastSource) {
+    if (source !== lastSource) {
+      clearTiles();    // nothing from one car may be left on show as if it came from another
+      clearReports();
+    }
     lastState = status.state;
+    lastSource = source;
     if (status.state === "connected") loadChoices();
     else clearTiles();
+    showSources(status);
   }
 }
 
@@ -446,6 +518,14 @@ async function saveChoices() {
 
 /* ---- codes ------------------------------------------------------------- */
 
+let reportEpoch = 0;  // goes up when the car changes, so answers about the last one are dropped
+
+function clearReports() {
+  reportEpoch++;
+  $("codes").replaceChildren();
+  $("monitors").replaceChildren();
+}
+
 function codeList(codes) {
   if (codes === null || codes === undefined) return el("span", { class: "secondary" }, "Not reported by this module");
   if (!codes.length) return el("span", { class: "secondary" }, "None");
@@ -455,7 +535,9 @@ function codeList(codes) {
 async function readCodes() {
   const box = $("codes");
   box.replaceChildren(el("p", { class: "secondary" }, "Reading codes…"));
+  const epoch = reportEpoch;
   const report = await api("/api/codes");
+  if (epoch !== reportEpoch) return;
   if (report.error) {
     box.replaceChildren(problem(report.error));
     return;
@@ -493,7 +575,9 @@ async function readCodes() {
 async function readMonitors() {
   const box = $("monitors");
   box.replaceChildren(el("p", { class: "secondary" }, "Checking readiness…"));
+  const epoch = reportEpoch;
   const report = await api("/api/monitors");
+  if (epoch !== reportEpoch) return;
   if (report.error) {
     box.replaceChildren(problem(report.error));
     return;
@@ -543,6 +627,182 @@ async function loadSessions() {
   }));
 }
 
+/* ---- settings: data source ------------------------------------------------ */
+
+function vehicleName(name) {
+  return VEHICLE_NAMES[name] || name;
+}
+
+function showSources(status) {
+  const simulation = status.simulation;
+  $("source-state").replaceChildren(simulation
+    ? statusLine("warning", "Showing a simulated " + vehicleName(simulation) + ", not a real car")
+    : el("div", { class: "status" }, "Using the real car, through the adapter"));
+  const choices = [null, ...(status.simulations || [])].filter((name) => name !== simulation);
+  $("sources").replaceChildren(...choices.map((name) =>
+    el("button", { class: "quiet", onclick: () => chooseSource(name) },
+      name ? "Simulate a " + vehicleName(name) : "Use the real car")));
+}
+
+async function chooseSource(name) {
+  const result = await api("/api/simulation", { vehicle: name });
+  if (result.error) $("source-state").replaceChildren(problem(result.error));
+  else showStatus(result);
+}
+
+/* ---- settings: Wi-Fi -------------------------------------------------------- */
+
+let network = null;      // latest Wi-Fi status from the server
+let networkTimer = null;
+
+function pageAddress(hostname) {
+  return "http://" + hostname + ".local" + (location.port ? ":" + location.port : "");
+}
+
+function showNetwork(status) {
+  if (status.error) {
+    $("wifi-card").hidden = false;
+    $("wifi-state").replaceChildren(problem(status.error));
+    return;
+  }
+  $("wifi-card").hidden = !status.managed;
+  if (!status.managed) return;
+  network = status;
+
+  const lines = [];
+  if (status.switching) lines.push(statusLine("warning", "Switching to " + status.switching + "…"));
+  else if (status.mode === "hotspot") lines.push(statusLine("good", "Hotspot " + status.hotspot + " is on"));
+  else if (status.mode === "wifi") {
+    lines.push(statusLine("good", "On Wi-Fi network " + status.saved + (status.address ? ", address " + status.address : "")));
+  } else lines.push(statusLine("warning", "Not on any network; the hotspot comes back by itself"));
+  if (status.problem) lines.push(problem(status.problem));
+  $("wifi-state").replaceChildren(...lines);
+
+  const saved = Boolean(status.saved);
+  const busy = Boolean(status.switching);
+  $("wifi-saved").hidden = !saved;
+  $("wifi-form").hidden = saved;
+  $("wifi-join").textContent = "Join " + (status.saved || "");
+  $("wifi-join").hidden = status.mode === "wifi";
+  $("wifi-hotspot").hidden = status.mode !== "wifi";
+  for (const id of ["wifi-join", "wifi-hotspot", "wifi-forget", "wifi-save"]) $(id).disabled = busy;
+
+  // While the radio is changing over, keep asking until it settles (or this page loses the box).
+  if (busy && networkTimer === null) {
+    networkTimer = setTimeout(() => {
+      networkTimer = null;
+      loadNetwork();
+    }, NETWORK_POLL_MS);
+  }
+}
+
+async function loadNetwork() {
+  showNetwork(await api("/api/network"));
+}
+
+async function changeNetwork(request, note) {
+  const result = await api("/api/network", request);
+  if (result.error) {
+    $("wifi-note").textContent = result.error;
+    return false;
+  }
+  $("wifi-note").textContent = note || "";
+  showNetwork(result);
+  return true;
+}
+
+async function findNetworks() {
+  const box = $("wifi-networks");
+  box.replaceChildren(el("span", { class: "secondary small" }, "Looking for networks…"));
+  const result = await api("/api/network/scan");
+  if (result.error) {
+    box.replaceChildren(problem(result.error));
+    return;
+  }
+  if (!result.networks.length) {
+    box.replaceChildren(el("span", { class: "secondary small" },
+      "No networks found. The box sees fewer while its hotspot is on; type the name instead."));
+    return;
+  }
+  box.replaceChildren(...result.networks.map((found) =>
+    el("button", { class: "quiet", onclick: () => { $("wifi-ssid").value = found.ssid; } },
+      found.ssid + " · signal " + found.signal + "%" + (found.security ? "" : " · open"))));
+}
+
+async function saveNetwork() {
+  const saved = await changeNetwork({ action: "save", ssid: $("wifi-ssid").value, password: $("wifi-password").value });
+  if (!saved) return;
+  $("wifi-password").value = "";
+  $("wifi-networks").replaceChildren();
+}
+
+function joinNetwork() {
+  const name = network.saved;
+  return changeNetwork({ action: "join" },
+    "The " + network.hotspot + " hotspot switches off in a moment, so this page will stop responding. " +
+    "Put this device on " + name + " and open " + pageAddress(network.hostname) + ". " +
+    "If the box cannot join " + name + ", the hotspot comes back within about a minute.");
+}
+
+function useHotspot() {
+  return changeNetwork({ action: "hotspot" },
+    "The box is leaving " + network.saved + ", so this page will stop responding. " +
+    "Put this device on the " + network.hotspot + " hotspot and open " + pageAddress(network.hostname) + ".");
+}
+
+/* ---- settings: software ------------------------------------------------------ */
+
+function showUpdate(text, kind) {
+  $("update-state").replaceChildren(...(text ? [kind ? statusLine(kind, text) : el("p", { class: "secondary" }, text)] : []));
+}
+
+async function loadUpdate() {
+  const status = await api("/api/update");
+  $("update-notes").textContent = "";
+  $("update-install").hidden = true;
+  if (status.error) {
+    showUpdate(status.error, "critical");
+    return;
+  }
+  $("update-check").hidden = !status.managed;
+  $("update-version").textContent = "Version " + status.current;
+  showUpdate(status.rolled_back
+    ? "Version " + status.rolled_back + " did not start, so the box went back to version " + status.current
+    : "", "critical");
+}
+
+async function checkForUpdate() {
+  showUpdate("Checking for updates…");
+  $("update-notes").textContent = "";
+  $("update-install").hidden = true;
+  const found = await api("/api/update", { action: "check" });
+  if (found.error) {
+    showUpdate(found.error, "critical");
+    return;
+  }
+  if (!found.available) {
+    showUpdate("This is the latest version", "good");
+    return;
+  }
+  showUpdate("Version " + found.latest + " is available", "warning");
+  $("update-notes").textContent = found.notes;
+  $("update-install").hidden = false;
+}
+
+async function installUpdate() {
+  $("update-install").disabled = true;
+  showUpdate("Downloading and testing the update. This can take a minute…");
+  const result = await api("/api/update", { action: "install" });
+  $("update-install").disabled = false;
+  if (result.error) {
+    showUpdate(result.error, "critical");
+    return;
+  }
+  $("update-install").hidden = true;
+  $("update-notes").textContent = "";
+  showUpdate("Version " + result.installed + " is installed. The app is restarting; this page reloads by itself.", "good");
+}
+
 /* ---- wiring -------------------------------------------------------------- */
 
 function showTab(name) {
@@ -551,12 +811,23 @@ function showTab(name) {
     $("panel-" + tab).hidden = tab !== name;
   }
   if (name === "sessions") loadSessions();
+  if (name === "settings") {
+    loadNetwork();
+    loadUpdate();
+  }
 }
 
 for (const tab of TABS) $("tab-" + tab).addEventListener("click", () => showTab(tab));
 $("record").addEventListener("click", toggleRecording);
 $("read-codes").addEventListener("click", readCodes);
 $("read-monitors").addEventListener("click", readMonitors);
+$("wifi-scan").addEventListener("click", findNetworks);
+$("wifi-save").addEventListener("click", saveNetwork);
+$("wifi-join").addEventListener("click", joinNetwork);
+$("wifi-hotspot").addEventListener("click", useHotspot);
+$("wifi-forget").addEventListener("click", () => changeNetwork({ action: "forget" }));
+$("update-check").addEventListener("click", checkForUpdate);
+$("update-install").addEventListener("click", installUpdate);
 
 const stream = new EventSource("/api/stream");  // reconnects by itself after a dropout
 stream.onmessage = (event) => {

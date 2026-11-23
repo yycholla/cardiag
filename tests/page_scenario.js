@@ -146,6 +146,157 @@ async function scenario() {
   check(recordRequests[1].action === "stop", "second press stops");
   check(text($("record")) === "Start recording" && text($("record-status")) === "", "back to idle");
 
+  // Settings: switching to a simulated car and back.
+  routes["/api/network"] = DATA.network;
+  routes["/api/update"] = DATA.update;
+  await $("tab-settings").fire("click");
+  await settle();
+  check(text($("source-state")).includes("Using the real car, through the adapter"), "says the car is real");
+  const sourceLabels = () => $("sources").children.map(text).join("|");
+  check(sourceLabels() === "Simulate a Ford Focus|Simulate a Chevrolet Tahoe", "offers the simulated cars: " + sourceLabels());
+  const simRequests = [];
+  routes["/api/simulation"] = (options) => {
+    simRequests.push(JSON.parse(options.body));
+    return simRequests.length === 1 ? DATA.simulating : { error: "no such car" };
+  };
+  await $("sources").children[1].fire("click");
+  await settle();
+  check(simRequests[0].vehicle === "tahoe", "asks for the Tahoe");
+  check(DATA.simulating.state === "starting" && text($("link-text")) === "Starting", "shows the switch under way");
+  check($("tiles").children.length === 0, "the real car's values are cleared at once");
+  check(text($("codes")) === "" && text($("monitors")) === "", "and so are its codes and readiness");
+  feed(DATA.tahoe);
+  await settle();
+  check(text($("link-text")) === "Simulation", "the header says it is a simulation, got " + text($("link-text")));
+  check(text($("link-detail")).startsWith("Simulated Chevrolet Tahoe, made-up data · VIN "), "and which car: " + text($("link-detail")));
+  check(text($("source-state")).includes("simulated Chevrolet Tahoe, not a real car"), "settings say so too");
+  check(sourceLabels() === "Use the real car|Simulate a Ford Focus", "offers the way back: " + sourceLabels());
+  check($("tiles").children.length === DATA.tahoe.readings.length, "shows the Tahoe's values");
+  await $("sources").children[0].fire("click");
+  check(simRequests[1].vehicle === null, "asks for the real car");
+  check(text($("source-state")).includes("no such car"), "shows why a switch failed");
+  // Codes and readiness asked of the simulated car, with the answers arriving after the switch back.
+  routes["/api/codes"] = () => {
+    feed(live[0]);
+    return DATA.codes;
+  };
+  await $("read-codes").fire("click");
+  check(text($("codes")) === "", "a late answer about the simulated car is not shown for the real one: " + text($("codes")));
+  routes["/api/codes"] = DATA.codes;
+  routes["/api/monitors"] = () => {
+    feed(DATA.tahoe);
+    return DATA.monitors;
+  };
+  await $("read-monitors").fire("click");
+  check(text($("monitors")) === "", "nor a late readiness answer: " + text($("monitors")));
+  routes["/api/monitors"] = DATA.monitors;
+  await $("read-codes").fire("click");
+  check(text($("codes")).includes("P0171"), "codes read after the switch are shown");
+  feed(live[0]);
+  await settle();
+  check(text($("codes")) === "", "and cleared again when the car changes");
+  check(text($("link-text")) === "Connected" && sourceLabels().startsWith("Simulate a Ford Focus"), "back on the real car");
+  check(tiles.has("01:0C") && tiles.get("01:0C").history.length === 1, "trend lines start again after a switch");
+
+  // Settings: Wi-Fi. Nothing saved yet, so the form is offered.
+  check($("wifi-card").hidden === false, "shows Wi-Fi where the app manages it");
+  check(text($("wifi-state")).includes("Hotspot cardiag is on"), "hotspot state: " + text($("wifi-state")));
+  check($("wifi-form").hidden === false && $("wifi-saved").hidden === true, "offers to save a network");
+  routes["/api/network/scan"] = DATA.scan;
+  await $("wifi-scan").fire("click");
+  const found = $("wifi-networks").children;
+  check(text(found[0]) === "Home · signal 82%", "lists networks: " + text(found[0]));
+  check(text(found[2]) === "Cafe: Free · signal 40% · open", "marks open networks: " + text(found[2]));
+  await found[0].fire("click");
+  check($("wifi-ssid").value === "Home", "picking a network fills in its name");
+
+  let networkNow = DATA.network;
+  const networkRequests = [];
+  const networkAnswers = { save: DATA.network_saved, join: DATA.network_joining, hotspot: DATA.network_leaving };
+  routes["/api/network"] = (options) => {
+    if (!options.method) return networkNow;
+    const request = JSON.parse(options.body);
+    networkRequests.push(request);
+    return networkAnswers[request.action];
+  };
+  $("wifi-password").value = "short";
+  networkAnswers.save = { error: "a Wi-Fi password is 8 to 63 characters" };
+  await $("wifi-save").fire("click");
+  check(text($("wifi-note")) === "a Wi-Fi password is 8 to 63 characters", "explains a refused password");
+  check($("wifi-password").value === "short", "and leaves it there to correct");
+  $("wifi-password").value = "correct horse";
+  networkAnswers.save = DATA.network_saved;
+  await $("wifi-save").fire("click");
+  const sent = networkRequests[networkRequests.length - 1];
+  check(sent.action === "save" && sent.ssid === "Home" && sent.password === "correct horse", "sends the name and password");
+  check($("wifi-password").value === "", "clears the password box");
+  check($("wifi-saved").hidden === false && $("wifi-form").hidden === true, "shows the saved network instead of the form");
+  check(text($("wifi-join")) === "Join Home" && $("wifi-join").hidden === false, "offers to join it");
+  check($("wifi-hotspot").hidden === true, "no need for 'back to the hotspot' yet");
+  check(text($("wifi-state")).includes("Hotspot cardiag is on"), "saving does not leave the hotspot");
+
+  await $("wifi-join").fire("click");
+  check(text($("wifi-state")).includes("Switching to Home…"), "says it is switching: " + text($("wifi-state")));
+  check($("wifi-join").disabled === true && $("wifi-forget").disabled === true, "no second press while switching");
+  const address = "http://" + DATA.network.hostname + ".local:8000";
+  check(text($("wifi-note")).includes("Put this device on Home and open " + address), "says where to find the page next: " + text($("wifi-note")));
+  check(text($("wifi-note")).includes("the hotspot comes back"), "and what happens if joining fails");
+  check(timers.length === 1, "keeps watching while the radio changes over");
+  networkNow = DATA.network_joined;
+  timers.shift()();
+  await settle();
+  check(text($("wifi-state")).includes("On Wi-Fi network Home, address 192.168.0.23"), "joined: " + text($("wifi-state")));
+  check($("wifi-join").hidden === true && $("wifi-hotspot").hidden === false, "now offers the way back");
+  check($("wifi-hotspot").disabled === false && timers.length === 0, "settled, so it stops asking");
+  await $("wifi-hotspot").fire("click");
+  check(networkRequests[networkRequests.length - 1].action === "hotspot", "asks for the hotspot");
+  check(text($("wifi-note")).includes("Put this device on the cardiag hotspot and open " + address), "hotspot directions: " + text($("wifi-note")));
+  timers.length = 0;
+
+  networkNow = Object.assign({}, DATA.network_saved, { problem: "Could not join Home: the password was not accepted. The hotspot is back on." });
+  await loadNetwork();
+  check(text($("wifi-state")).includes("the password was not accepted"), "shows why joining failed");
+  check(text($("wifi-state")).includes("Hotspot cardiag is on"), "alongside where the box is now");
+  networkNow = { error: "NetworkManager is not running" };
+  await loadNetwork();
+  check(text($("wifi-state")).includes("NetworkManager is not running"), "shows a Wi-Fi failure");
+  networkNow = { managed: false };
+  await loadNetwork();
+  check($("wifi-card").hidden === true, "no Wi-Fi card where the app does not manage Wi-Fi");
+
+  // Settings: software updates.
+  check(text($("update-version")) === "Version " + DATA.update.current && text($("update-state")) === "", "shows the version: " + text($("update-version")));
+  check($("update-check").hidden === false && $("update-install").hidden === true, "offers to check, not yet to install");
+  const updateAnswers = { check: { error: "could not reach GitHub. Updates need internet access, so join a Wi-Fi network first" } };
+  routes["/api/update"] = (options) => (options.method ? updateAnswers[JSON.parse(options.body).action] : DATA.update);
+  await $("update-check").fire("click");
+  check(text($("update-state")).includes("join a Wi-Fi network first"), "explains a failed check");
+  updateAnswers.check = Object.assign({}, DATA.update_found, { available: false, latest: DATA.update.current, notes: "" });
+  await $("update-check").fire("click");
+  check(text($("update-state")).includes("This is the latest version"), "says when there is nothing newer");
+  check($("update-install").hidden === true, "and offers nothing to install");
+  updateAnswers.check = DATA.update_found;
+  await $("update-check").fire("click");
+  check(text($("update-state")).includes("Version 9.0.0 is available") && text($("update-version")) === "Version " + DATA.update.current, "announces the update");
+  check(text($("update-notes")) === "Reads more codes.", "with its notes");
+  check($("update-install").hidden === false, "and offers to install it");
+  updateAnswers.install = { error: "version 9.0.0 failed its self-test here, so it was not installed" };
+  await $("update-install").fire("click");
+  check(text($("update-state")).includes("failed its self-test"), "explains a failed install");
+  check($("update-install").hidden === false && $("update-install").disabled === false, "and lets it be tried again");
+  updateAnswers.install = DATA.update_installed;
+  await $("update-install").fire("click");
+  check(text($("update-state")).includes("Version 9.0.0 is installed"), "confirms the install: " + text($("update-state")));
+  check($("update-install").hidden === true && reloads === 0, "nothing more to install; not reloaded yet");
+  feed(Object.assign({}, live[0], { status: Object.assign({}, live[0].status, { version: "9.0.0" }) }));
+  check(reloads === 1, "reloads once the new version is the one answering");
+  routes["/api/update"] = Object.assign({}, DATA.update, { rolled_back: "9.0.0" });
+  await loadUpdate();
+  check(text($("update-state")).includes("Version 9.0.0 did not start, so the box went back to version " + DATA.update.current), "reports an undone update");
+  routes["/api/update"] = { managed: false, current: DATA.update.current };
+  await loadUpdate();
+  check($("update-check").hidden === true && text($("update-version")) === "Version " + DATA.update.current && text($("update-state")) === "", "version only, where updates are not managed");
+
   // A value that stops arriving keeps its tile briefly, then goes.
   const without = Object.assign({}, live[0], { readings: live[0].readings.slice(1) });
   feed(without);
