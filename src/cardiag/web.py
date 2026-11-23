@@ -67,6 +67,15 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(200, (_STATIC / "index.html").read_bytes(), "text/html; charset=utf-8")
         elif path == "/api/status":
             self._json(hub.status())
+        elif path == "/api/glance":
+            # The one reply other origins may read: the glasses app runs inside another app's page.
+            # It only reports values, so nothing that changes the box is opened up with it.
+            body = json.dumps(garage.glance(hub, self.server.db_path)).encode()
+            self._send(200, body, "application/json", {"Access-Control-Allow-Origin": "*"})
+        elif path == "/glasses":
+            self._send(301, b"", "text/plain", {"Location": "/glasses/"})
+        elif match := re.fullmatch(r"/glasses/((?:[\w-]+/)?[\w.-]*)", path):
+            self._glasses(match.group(1) or "index.html")
         elif path == "/api/values":
             self._json(hub.values())
         elif path == "/api/stream":
@@ -245,6 +254,16 @@ class _Handler(BaseHTTPRequestHandler):
             self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)
+
+    def _glasses(self, name: str) -> None:
+        """The app for Even G2 glasses, as it was built into the package (see glasses/ in the repository)."""
+        kinds = {".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css",
+                 ".png": "image/png", ".json": "application/json"}
+        target = _STATIC / "glasses" / name
+        if ".." in name or target.suffix not in kinds or not target.is_file():
+            self._json({"error": "not found"}, 404)
+        else:
+            self._send(200, target.read_bytes(), kinds[target.suffix])
 
     def _json(self, payload, status: int = 200) -> None:
         self._send(status, json.dumps(payload).encode(), "application/json")

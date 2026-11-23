@@ -290,6 +290,33 @@ def saved_interval(db_path: str | None) -> float | None:
         return None
 
 
+_GEARS_KEPT = 5.0  # seconds the learned gears are remembered between glances, to spare the disk
+_gears_seen: dict = {"vin": None, "path": None, "at": 0.0, "ratios": []}
+
+
+def _ratios(db_path: str | None, vin: str | None) -> list[float]:
+    """The gear ratios learned for this car, read at most once every few seconds."""
+    seen = _gears_seen
+    if seen["vin"] != vin or seen["path"] != db_path or time.monotonic() - seen["at"] > _GEARS_KEPT:
+        store = Store(db_path)
+        try:
+            ratios = [gear["ratio"] for gear in store.profile(vin)["gears"]]
+        finally:
+            store.close()
+        seen.update(vin=vin, path=db_path, at=time.monotonic(), ratios=ratios)
+    return seen["ratios"]
+
+
+def glance(hub: Hub, db_path: str | None) -> dict:
+    """The latest values, with the gear and clutch slip worked out, for a display that shows a handful of numbers."""
+    result = hub.glance()
+    ratios = _ratios(db_path, result["vin"]) if result["state"] == "connected" else []
+    values = {r["key"]: r["value"] for r in result["readings"] if not isinstance(r["value"], str)}
+    gear, slip = analysis.gear_now(values, ratios)
+    result.update(gears_known=bool(ratios), gear=gear, slip=slip)
+    return result
+
+
 def _passes(hub: Hub, store: Store, source: object) -> tuple[list, dict]:
     if source in (None, "", "live"):
         return hub.history()
