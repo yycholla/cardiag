@@ -36,6 +36,15 @@ _LINK_ERRORS = (AdapterError, LinkError, FrameError, serial.SerialException, OSE
 # Passes kept in memory for the Diagnosis and Drive pages: about an hour at four a second.
 HISTORY_PASSES = 14400
 
+# A discovery run first asks for every identifier in its range, then keeps re-reading the ones
+# that answered. These are how many of each are asked per pass, between the standard values.
+SCAN_PER_PASS = 24
+READS_PER_PASS = 8
+DISCOVERY_INTERVAL = 0.05  # least seconds between passes of a discovery run
+MAX_DISCOVERED = 400
+# Standard values read alongside a discovery run, to line the unknown bytes up against.
+CONTEXT_PIDS = (0x0C, 0x0D, 0x49, 0x11, 0x04, 0x05)
+
 # After this many passes with no answer at all, the car is treated as switched off.
 _SILENT_PASSES_ALLOWED = 3
 
@@ -125,6 +134,8 @@ class Hub:
         self._elapsed = 0.0
         self._recording: dict | None = None
         self._recording_started = 0.0
+        self._discovery: dict | None = None  # progress of a discovery run, for the page
+        self._work: dict | None = None  # the run itself; touched by the worker thread only
 
         self._jobs: queue.SimpleQueue[tuple[Callable[[Obd], Any], Future]] = queue.SimpleQueue()
         self._wake = threading.Event()
@@ -202,6 +213,23 @@ class Hub:
             self._version += 1
             self._changed.notify_all()
         self._wake.set()
+
+    def start_discovery(
+        self, module: int, first: int, count: int, *, known: list[int] | None = None, note: str | None = None
+    ) -> dict:
+        """Begin recording the raw bytes of everything a module answers.
+
+        With `known`, those identifiers are read straight away; otherwise the range is asked through once first.
+        """
+        self._call(lambda obd: self._begin_discovery(obd, module, first, count, known, note))
+        return self.status()
+
+    def stop_discovery(self) -> dict:
+        try:
+            self._call(lambda obd: self._end_discovery())
+        except NotConnected:
+            pass  # losing the car already ended the run
+        return self.status()
 
     def scan(self, module: int, first: int, count: int) -> list[tuple[int, bytes]]:
         """Ask one module for a run of maker-specific identifiers; return the ones it has."""
@@ -303,6 +331,7 @@ class Hub:
             "simulation": self._simulation,
             "simulations": sorted(self._simulators),
             "interval": self.interval,
+            "discovery": dict(self._discovery) if self._discovery else None,
             "rate": self._rate(),
             "values": len(self._readings),
         }
@@ -353,6 +382,7 @@ class Hub:
                 self._mark_disconnected("no_adapter", str(exc))
             finally:
                 self._end_recording()
+                self._end_discovery()
                 if transport is not None:
                     try:
                         transport.close()
@@ -421,6 +451,8 @@ class Hub:
             with self._changed:
                 watched = self._watched()
                 maker = list(self._maker)
+                if self._work:  # a discovery run reads a fixed few standard values and nothing else
+                    watched, maker = [pid for pid in CONTEXT_PIDS if pid in self._available], []
             samples = []
             for pid in watched:
                 reading = obd.read_pid(pid)
@@ -446,6 +478,8 @@ class Hub:
             if self._store is not None:
                 self._store.add_samples(self._recording["session"], self._record_cycle, samples)
                 self._record_cycle += 1
+            if self._work:
+                self._discover(obd, samples)
             with self._changed:
                 if self._switch.is_set():
                     return
@@ -459,7 +493,9 @@ class Hub:
                 self._version += 1
                 self._changed.notify_all()
 
-            spare = self.interval - (time.monotonic() - pass_started)
+            # A discovery run ignores the chosen rate, since every pause is identifiers not read, but it
+            # still leaves a gap: an adapter that answers at once must not fill the disk or starve the page.
+            spare = (DISCOVERY_INTERVAL if self._work else self.interval) - (time.monotonic() - pass_started)
             if spare > 0 and self._jobs.empty():
                 self._wake.wait(spare)
             self._wake.clear()
@@ -474,6 +510,72 @@ class Hub:
                 future.set_result(job(obd))
             except Exception as exc:  # reported to whoever asked; polling carries on
                 future.set_exception(exc)
+
+    def _begin_discovery(
+        self, obd: Obd, module: int, first: int, count: int, known: list[int] | None, note: str | None
+    ) -> None:
+        if not obd.maker_values:
+            raise ValueError("maker-specific values can only be read on an 11-bit CAN network so far")
+        if self._work:
+            raise ValueError("a discovery run is already going; stop it first")
+        store = Store(self._db_path)
+        number = store.start_discovery(vin=self._vin, module=f"{module:03X}", note=note or None)
+        self._work = {
+            "store": store, "id": number, "module": module, "started": time.monotonic(),
+            "todo": [] if known else list(range(first, min(0x10000, first + count))),
+            "found": list(known or [])[:MAX_DISCOVERED], "cursor": 0, "asked": 0, "readings": 0,
+        }
+        self._work["range"] = len(self._work["todo"])
+        self._publish_discovery()
+
+    def _publish_discovery(self) -> None:
+        work = self._work
+        with self._changed:
+            self._discovery = {
+                "id": work["id"], "module": f"{work['module']:03X}",
+                "phase": "scanning" if work["todo"] else "capturing",
+                "asked": work["asked"], "range": work["range"], "found": len(work["found"]),
+                "readings": work["readings"], "seconds": round(time.monotonic() - work["started"], 1),
+            }
+            self._version += 1
+            self._changed.notify_all()
+
+    def _discover(self, obd: Obd, samples: list) -> None:
+        """One pass of a discovery run: ask the next few identifiers and keep their bytes."""
+        work = self._work
+        at = time.monotonic() - work["started"]
+        if work["todo"]:
+            batch, work["todo"] = work["todo"][:SCAN_PER_PASS], work["todo"][SCAN_PER_PASS:]
+            work["asked"] += len(batch)
+        else:
+            batch = [work["found"][(work["cursor"] + i) % len(work["found"])] for i in range(min(READS_PER_PASS, len(work["found"])))]
+            work["cursor"] += len(batch)
+        rows = []
+        for identifier in batch:
+            data = obd.read_identifier(work["module"], identifier)
+            if data is None:
+                continue
+            if identifier not in work["found"] and len(work["found"]) < MAX_DISCOVERED:
+                work["found"].append(identifier)
+            rows.append((time.monotonic() - work["started"], identifier, data))
+        work["readings"] += len(rows)
+        context = [(reading.key, reading.value) for _, reading in samples if not isinstance(reading.value, str)]
+        work["store"].add_discovery(work["id"], at, rows, context)
+        if not work["todo"] and not work["found"]:
+            self._end_discovery()  # the whole range was asked and nothing answered: there is nothing to capture
+        else:
+            self._publish_discovery()
+
+    def _end_discovery(self) -> None:
+        if self._work is None:
+            return
+        self._work["store"].end_discovery(self._work["id"])
+        self._work["store"].close()
+        self._work = None
+        with self._changed:
+            self._discovery = None
+            self._version += 1
+            self._changed.notify_all()
 
     def _begin_recording(self, note: str | None) -> None:
         if self._store is not None:

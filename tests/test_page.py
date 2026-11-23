@@ -63,6 +63,7 @@ def test_page_script_with_real_server_data(box, tmp_path):
 
     data["setup"] = served.request("/api/setup")[1]
     data["maker"] = served.request("/api/maker")[1]
+    data["discoveries"] = served.request("/api/discoveries")[1]
     data["profile"] = served.request("/api/setup/profile", {"engine_litres": "2.0", "transmission": "dual-clutch automatic"})[1]
     store = Store(served.db_path)
     data["drive_id"] = store.import_session("elsewhere#1", as_recording(geared_passes(), vin=served.hub.status()["vin"]))

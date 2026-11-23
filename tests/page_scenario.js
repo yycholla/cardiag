@@ -509,6 +509,75 @@ async function scenario() {
   check(text($("scan-results")).includes("Changed from 03"), "and what moved since the last scan: " + text($("scan-results")));
   await $("scan-results").descendants().find((node) => node.tag === "button").fire("click");
   check($("maker-id").value === "1E12" && $("maker-size").value === "1", "a found identifier can be taken into the form");
+  // Setup: a discovery run.
+  routes["/api/discoveries"] = DATA.discoveries;
+  await loadDiscoveries();
+  check(text($("discover-runs")) === "No discovery runs yet." && text($("discover-start")) === "Start a discovery run", "no runs to begin with");
+  check($("discover-reuse").children.length === 1 && $("discover-count").value === "256", "offers to ask through a range");
+  const discoverRequests = [];
+  const scanningNow = { id: 1, module: "7E9", phase: "scanning", asked: 48, range: 1024, found: 2, readings: 2, seconds: 3.1 };
+  const finished = { id: 1, started_at: 1700000000, ended_at: 1700000600, vin: "1FADP3F2XHL123456", module: "7E9", note: null, identifiers: 6, readings: 1800, seconds: 598.2 };
+  routes["/api/discover"] = (options) => {
+    const request = JSON.parse(options.body);
+    discoverRequests.push(request);
+    if (request.action === "stop") return Object.assign({}, DATA.discoveries, { active: null, runs: [finished] });
+    if (request.count === 8192) return { error: "a discovery run is already going; stop it first" };
+    return Object.assign({}, DATA.discoveries, { active: scanningNow });
+  };
+  $("scan-first").value = "1e00";
+  $("discover-count").value = "8192";
+  await $("discover-start").fire("click");
+  check(text($("discover-note")) === "A discovery run is already going; stop it first.", "explains a refused start");
+  $("discover-count").value = "1024";
+  await $("discover-start").fire("click");
+  const begun = discoverRequests[1];
+  check(begun.action === "start" && begun.module === "7E9" && begun.first === "1E00" && begun.count === 1024 && begun.reuse === null, "starts a run over the chosen range: " + JSON.stringify(begun));
+  check(text($("discover-state")) === "Run 1: asking the module what it has, 48 of 1,024 identifiers, 2 found so far", "says how the scan is going: " + text($("discover-state")));
+  check(text($("discover-start")) === "Stop the discovery run", "the button now stops it");
+  feed(Object.assign({}, live[0], { status: Object.assign({}, live[0].status, { discovery: Object.assign({}, scanningNow, { phase: "capturing", found: 6, readings: 412, seconds: 95 }) }) }));
+  check(text($("discover-state")) === "Run 1: reading 6 identifiers in turn, 412 readings over 1 min 35 s. Drive, then stop the run.", "and then how the capture is going: " + text($("discover-state")));
+  routes["/api/discoveries"] = Object.assign({}, DATA.discoveries, { active: null, runs: [finished] });
+  await $("discover-start").fire("click");
+  await settle();
+  check(discoverRequests[2].action === "stop" && text($("discover-state")) === "" && text($("discover-start")) === "Start a discovery run", "stopping ends it");
+  check(text($("discover-runs")).includes("7E9") && text($("discover-runs")).includes("9 min 58 s"), "and lists the run: " + text($("discover-runs")));
+  check($("discover-reuse").children.length === 2 && text($("discover-reuse").children[1]) === "Read again the 6 identifiers run 1 found", "which a later run can read again without scanning");
+  const rawLink = $("discover-runs").descendants().find((node) => node.tag === "a");
+  check(rawLink.getAttribute("href") === "/api/discoveries/1.csv", "links to the raw bytes");
+
+  routes["/api/discoveries/1"] = {
+    run: { id: 1, module: "7E9", vin: "1FADP3F2XHL123456", note: null, started_at: 1700000000, ended_at: 1700000600, seconds: 598.2 },
+    gears_known: false, passes: 2400,
+    moving: [
+      { id: "1E12", bytes: 1, readings: 300, last: "03", first: "01", score: 0.97,
+        readings_of: [{ start: 0, size: 1, signed: false, low: 1, high: 6, distinct: 6, moves_with: [{ what: "the gear", likeness: 0.97 }], gear_match: 0.97, guess: "Equals the gear worked out from the ratio in 97 % of readings: likely the gear in use", score: 0.97 }] },
+      { id: "1E30", bytes: 3, readings: 300, last: "800A3C", first: "800000", score: 0.99,
+        readings_of: [{ start: 1, size: 2, signed: true, low: -5, high: 2790, distinct: 250, moves_with: [{ what: "engine speed", likeness: 0.93 }, { what: "the speed of the shaft in use", likeness: 0.99 }], gear_match: null, guess: "Follows the speed of the shaft in use more closely than engine speed: likely an input shaft speed", score: 0.99 }] },
+    ],
+    still: [{ id: "1E01", bytes: 4, readings: 300, last: "44505336", first: "44505336" }],
+  };
+  await $("discover-runs").descendants().find((node) => node.tag === "button").fire("click");
+  const moved = text($("discover-report"));
+  for (const expected of ["Run 1: what moved over 9 min 58 s", "Gears have not been learned", "1E12", "byte 1", "the gear 0.97", "likely the gear in use",
+    "bytes 2 to 3, can be negative", "80 0A 3C", "1 identifier answered but never changed: 1E01 (44 50 53 36).", "These are leads."]) {
+    check(moved.includes(expected), "the report shows " + expected + " in: " + moved);
+  }
+  const takers = $("discover-report").descendants().filter((node) => node.tag === "button");
+  await takers[1].fire("click");
+  check($("maker-id").value === "1E30" && $("maker-start").value === "1" && $("maker-size").value === "2" && $("maker-signed").checked === true, "a lead can be taken into the form, with where it starts");
+  check(text($("maker-note")).startsWith("Taken from run 1."), "and says what is still needed");
+  $("maker-name").value = "Input shaft speed";
+  await $("maker-add").fire("click");
+  const sentShaft = makerRequests[makerRequests.length - 1].pop();
+  check(sentShaft.start === 1 && sentShaft.size === 2 && sentShaft.signed === true, "the value is saved from its second byte: " + JSON.stringify(sentShaft));
+  check(text($("maker-values")).includes("skip 1, then 2 bytes, can be negative"), "and its rule says so: " + text($("maker-values")));
+  routes["/api/discoveries/1"] = Object.assign({}, routes["/api/discoveries/1"], { gears_known: true, still: [] });
+  await $("discover-runs").descendants().find((node) => node.tag === "button").fire("click");
+  check(!text($("discover-report")).includes("Gears have not been learned") && !text($("discover-report")).includes("never changed"), "notes that do not apply are left out");
+  sane($("discover-report"), "the discovery report");
+  routes["/api/discoveries/1"] = { error: "no discovery run 1" };
+  await $("discover-runs").descendants().find((node) => node.tag === "button").fire("click");
+  check(text($("discover-report")).includes("No discovery run 1"), "a run that has gone is explained");
   showMaker(Object.assign({}, DATA.maker, { supported: false, modules: [], candidates: [] }));
   check($("maker-steps").hidden === true && $("maker-empty").hidden === false, "says so where the network is not one it can read these on");
   sane($("setup-steps"), "setup");

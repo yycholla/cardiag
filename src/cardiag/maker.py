@@ -20,24 +20,27 @@ class MakerValue:
     identifier: int
     name: str
     unit: str
-    size: int  # how many bytes, from the first, make up the number
+    size: int  # how many bytes make up the number
     signed: bool
     scale: float
     offset: float
+    start: int = 0  # how many bytes to skip before the number begins
 
     @property
     def key(self) -> str:
         return f"22:{self.module:03X}:{self.identifier:04X}"
 
     def decode(self, data: bytes) -> float | None:
-        if len(data) < self.size:
+        if len(data) < self.start + self.size:
             return None
-        return int.from_bytes(data[: self.size], "big", signed=self.signed) * self.scale + self.offset
+        number = int.from_bytes(data[self.start : self.start + self.size], "big", signed=self.signed)
+        return number * self.scale + self.offset
 
     def as_json(self) -> dict:
         return {
             "module": f"{self.module:03X}", "id": f"{self.identifier:04X}", "name": self.name, "unit": self.unit,
-            "size": self.size, "signed": self.signed, "scale": self.scale, "offset": self.offset, "key": self.key,
+            "size": self.size, "signed": self.signed, "scale": self.scale, "offset": self.offset, "start": self.start,
+            "key": self.key,
         }
 
 
@@ -92,6 +95,9 @@ def parse(given: object) -> list[MakerValue]:
         size = item.get("size", 1)
         if isinstance(size, bool) or size not in (1, 2, 3, 4):
             raise ValueError("the number of bytes must be 1, 2, 3 or 4")
+        start = item.get("start", 0)
+        if isinstance(start, bool) or not isinstance(start, int) or not 0 <= start <= 60:
+            raise ValueError("the number of bytes to skip must be between 0 and 60")
         scale = _number(item.get("scale", 1), "the scale")
         if scale == 0:
             raise ValueError("the scale cannot be zero")
@@ -99,7 +105,7 @@ def parse(given: object) -> list[MakerValue]:
             module=module_address(item.get("module")),
             identifier=hex_number(item.get("id"), 4, "the identifier"),
             name=name.strip(), unit=unit.strip(), size=size, signed=bool(item.get("signed", False)),
-            scale=scale, offset=_number(item.get("offset", 0), "the offset"),
+            scale=scale, offset=_number(item.get("offset", 0), "the offset"), start=start,
         )
         if value.key in seen:
             raise ValueError(f"{value.identifier:04X} from module {value.module:03X} is listed twice")

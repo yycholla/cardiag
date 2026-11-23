@@ -319,8 +319,11 @@ def make_focus_dct() -> SimVehicle:
     vehicle.ecus[1].extended = {
         0x1EBB: slip(odd=True),
         0x1EBC: slip(odd=False),
+        0x1E01: lambda t: bytes.fromhex("44505336"),  # never changes, as a part number would not
         0x1E12: lambda t: bytes([state(t)[4]]),
         0x1E1F: lambda t: _temperature(70 + state(t)[3] / 5),
+        # Two things in one answer: a status byte that never moves, then the speed of the shaft in use.
+        0x1E30: lambda t: bytes([0x80]) + _u16(state(t)[1] * _DCT_RATIOS[state(t)[4] - 1]),
     }
     return vehicle
 

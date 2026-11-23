@@ -40,6 +40,28 @@ CREATE TABLE IF NOT EXISTS vehicles (
     vin      TEXT PRIMARY KEY,   -- or "unknown" for a car that does not report one
     profile  TEXT NOT NULL       -- JSON: what setup learned about this car
 );
+CREATE TABLE IF NOT EXISTS discoveries (
+    id          INTEGER PRIMARY KEY,
+    started_at  REAL NOT NULL,   -- Unix time
+    ended_at    REAL,
+    vin         TEXT,
+    module      TEXT NOT NULL,   -- address the module answers from, as hex
+    note        TEXT
+);
+CREATE TABLE IF NOT EXISTS discovery_samples (
+    discovery_id  INTEGER NOT NULL REFERENCES discoveries(id) ON DELETE CASCADE,
+    t             REAL NOT NULL,     -- seconds from the start of the run
+    identifier    INTEGER NOT NULL,
+    data          BLOB NOT NULL      -- the bytes the module sent, untouched
+);
+CREATE INDEX IF NOT EXISTS discovery_samples_by_run ON discovery_samples (discovery_id, identifier, t);
+CREATE TABLE IF NOT EXISTS discovery_context (
+    discovery_id  INTEGER NOT NULL REFERENCES discoveries(id) ON DELETE CASCADE,
+    t             REAL NOT NULL,
+    key           TEXT NOT NULL,     -- a standard value read alongside, e.g. 01:0C
+    value         REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS discovery_context_by_run ON discovery_context (discovery_id, t);
 CREATE TABLE IF NOT EXISTS settings (
     key    TEXT PRIMARY KEY,
     value  TEXT NOT NULL
@@ -272,6 +294,85 @@ class Store:
                 ((cursor.lastrowid, *sample) for sample in samples),
             )
         return cursor.lastrowid
+
+    # ---- discovery runs: the raw bytes of everything a module answers ------------
+
+    def start_discovery(self, *, vin: str | None, module: str, note: str | None = None) -> int:
+        with self._db:
+            cursor = self._db.execute(
+                "INSERT INTO discoveries (started_at, vin, module, note) VALUES (?, ?, ?, ?)",
+                (time.time(), vin, module, note),
+            )
+        return cursor.lastrowid
+
+    def end_discovery(self, discovery_id: int) -> None:
+        with self._db:
+            self._db.execute("UPDATE discoveries SET ended_at = ? WHERE id = ?", (time.time(), discovery_id))
+
+    def add_discovery(
+        self, discovery_id: int, t: float, rows: Iterable[tuple[float, int, bytes]], context: Iterable[tuple[str, float]]
+    ) -> None:
+        """Store one pass: the identifiers read, as (seconds, identifier, bytes), and the standard values beside them."""
+        with self._db:
+            self._db.executemany(
+                "INSERT INTO discovery_samples (discovery_id, t, identifier, data) VALUES (?, ?, ?, ?)",
+                ((discovery_id, at, identifier, data) for at, identifier, data in rows),
+            )
+            self._db.executemany(
+                "INSERT INTO discovery_context (discovery_id, t, key, value) VALUES (?, ?, ?, ?)",
+                ((discovery_id, t, key, value) for key, value in context),
+            )
+
+    def discoveries(self) -> list[sqlite3.Row]:
+        return self._db.execute(
+            """
+            SELECT d.*,
+                   (SELECT COUNT(DISTINCT identifier) FROM discovery_samples WHERE discovery_id = d.id) AS identifiers,
+                   (SELECT COUNT(*) FROM discovery_samples WHERE discovery_id = d.id) AS readings,
+                   (SELECT MAX(t) FROM discovery_samples WHERE discovery_id = d.id) AS seconds
+            FROM discoveries d ORDER BY d.id
+            """
+        ).fetchall()
+
+    def discovery(self, discovery_id: int) -> tuple[sqlite3.Row, dict[int, list[tuple[float, bytes]]], list[tuple[float, dict[str, float]]]]:
+        """One run: its details, every identifier's readings in time order, and the standard values per pass."""
+        run = self._db.execute("SELECT * FROM discoveries WHERE id = ?", (discovery_id,)).fetchone()
+        if run is None:
+            raise KeyError(f"no discovery run {discovery_id}")
+        samples: dict[int, list[tuple[float, bytes]]] = {}
+        for row in self._db.execute(
+            "SELECT t, identifier, data FROM discovery_samples WHERE discovery_id = ? ORDER BY identifier, t", (discovery_id,)
+        ):
+            samples.setdefault(row["identifier"], []).append((row["t"], bytes(row["data"])))
+        context: list[tuple[float, dict[str, float]]] = []
+        for row in self._db.execute(
+            "SELECT t, key, value FROM discovery_context WHERE discovery_id = ? ORDER BY t", (discovery_id,)
+        ):
+            if not context or context[-1][0] != row["t"]:
+                context.append((row["t"], {}))
+            context[-1][1][row["key"]] = row["value"]
+        return run, samples, context
+
+    def export_discovery_csv(self, discovery_id: int, out: IO[str]) -> int:
+        """Every reading of a run as a row: seconds, identifier, bytes. Returns the row count."""
+        if self._db.execute("SELECT 1 FROM discoveries WHERE id = ?", (discovery_id,)).fetchone() is None:
+            raise KeyError(f"no discovery run {discovery_id}")
+        writer = csv.writer(out)
+        writer.writerow(["seconds", "kind", "name", "value"])
+        rows = 0
+        for row in self._db.execute(
+            """
+            SELECT t, 'identifier' AS kind, printf('%04X', identifier) AS name, hex(data) AS value
+              FROM discovery_samples WHERE discovery_id = ?1
+            UNION ALL
+            SELECT t, 'standard', key, value FROM discovery_context WHERE discovery_id = ?1
+            ORDER BY 1
+            """,
+            (discovery_id,),
+        ):
+            writer.writerow([f"{row['t']:.3f}", row["kind"], row["name"], row["value"]])
+            rows += 1
+        return rows
 
 
 def _checked(payload: dict) -> tuple[dict, list[tuple], list[tuple]]:

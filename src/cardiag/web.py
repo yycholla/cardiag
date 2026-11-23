@@ -98,6 +98,14 @@ class _Handler(BaseHTTPRequestHandler):
             self._json({"managed": True, **uploader.status()} if uploader else {"managed": False})
         elif path == "/api/maker":
             self._json(garage.maker_report(hub))
+        elif path == "/api/discoveries":
+            self._json(garage.discoveries(hub, self.server.db_path))
+        elif match := re.fullmatch(r"/api/discoveries/(\d+)(\.csv)?", path):
+            number = int(match.group(1))
+            if match.group(2):
+                self._discovery_csv(number)
+            else:
+                self._job(lambda: garage.discovery_report(self.server.db_path, number))
         else:
             self._json({"error": "not found"}, 404)
 
@@ -162,6 +170,8 @@ class _Handler(BaseHTTPRequestHandler):
             self._job(lambda: garage.save_maker(hub, self.server.db_path, body))
         elif path == "/api/maker/scan":
             self._job(lambda: garage.scan(hub, body))
+        elif path == "/api/discover":
+            self._job(lambda: garage.change_discovery(hub, self.server.db_path, body))
         elif path == "/api/interval":
             self._job(lambda: garage.set_interval(hub, self.server.db_path, body.get("seconds")))
         elif path == "/api/ingest" and self.server.accept_uploads:
@@ -247,6 +257,8 @@ class _Handler(BaseHTTPRequestHandler):
             self._json({"error": str(exc) or "not connected to a vehicle"}, 503)
         except ValueError as exc:
             self._json({"error": str(exc)}, 400)
+        except KeyError as exc:
+            self._json({"error": str(exc.args[0]) if exc.args else "not found"}, 404)
         except (AdapterError, FrameError, NetworkError, UpdateError) as exc:
             self._json({"error": str(exc)}, 502)
         except TimeoutError:
@@ -293,6 +305,23 @@ class _Handler(BaseHTTPRequestHandler):
             ]
         finally:
             store.close()
+
+    def _discovery_csv(self, number: int) -> None:
+        store = Store(self.server.db_path)
+        out = io.StringIO(newline="")
+        try:
+            store.export_discovery_csv(number, out)
+        except KeyError:
+            self._json({"error": f"there is no discovery run {number}"}, 404)
+            return
+        finally:
+            store.close()
+        self._send(
+            200,
+            out.getvalue().encode("utf-8"),
+            "text/csv; charset=utf-8",
+            {"Content-Disposition": f'attachment; filename="discovery-{number}.csv"'},
+        )
 
     def _session_csv(self, session_id: int) -> None:
         store = Store(self.server.db_path)
