@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="color-scheme" content="light dark">
+<title>cardiag</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --plane: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --trend: #898781;
+    --hairline: #e1e0d9;
+    --border: rgba(11, 11, 11, 0.10);
+    --accent: #2a78d6;
+    --button: #256abf;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --plane: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #f0efec;
+      --ink-2: #c3c2b7;
+      --hairline: #2c2c2a;
+      --border: rgba(255, 255, 255, 0.10);
+      --accent: #3987e5;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--plane);
+    color: var(--ink);
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .app {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 12px max(14px, env(safe-area-inset-right)) 32px max(14px, env(safe-area-inset-left));
+  }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  h1 { margin: 0; font-size: 18px; font-weight: 600; }
+  h3 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+  .link, .status { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .status { margin-top: 12px; }
+  .link-detail { margin: 4px 0 12px; min-height: 18px; color: var(--ink-2); font-size: 13px; overflow-wrap: anywhere; }
+  .secondary { color: var(--ink-2); }
+  .small { font-size: 13px; }
+
+  /* Status is always an icon plus words, never colour alone. */
+  .icon {
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+    width: 20px; height: 20px; border-radius: 50%;
+    color: #fff; font-size: 12px; font-weight: 700; line-height: 1;
+  }
+  .icon.good { background: var(--good); }
+  .icon.warning { background: var(--warning); color: #0b0b0b; }
+  .icon.critical { background: var(--critical); }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid var(--hairline); overflow-x: auto; }
+  .tabs button {
+    flex: 1 0 auto; min-height: 44px; padding: 0 14px;
+    border: 0; border-bottom: 2px solid transparent; background: none;
+    color: var(--ink-2); font: inherit; font-weight: 600; cursor: pointer;
+  }
+  .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+  button.primary, a.button {
+    display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px;
+    border: 0; border-radius: 8px; background: var(--button);
+    color: #fff; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
+  }
+  button:disabled { opacity: 0.45; cursor: default; }
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .toolbar input {
+    flex: 1 1 180px; min-height: 44px; padding: 0 12px;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+    color: var(--ink); font: inherit;
+  }
+  details { margin: 10px 0; }
+  summary { min-height: 44px; display: flex; align-items: center; color: var(--ink-2); font-weight: 600; cursor: pointer; }
+  .choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0 12px; }
+  .choice { display: flex; align-items: center; gap: 8px; min-height: 40px; }
+  .choice input { width: 18px; height: 18px; flex: none; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .tile, .card { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+  .tile { padding: 12px 12px 10px; min-width: 0; }
+  .card { margin-top: 12px; padding: 14px; }
+  .label { color: var(--ink-2); font-size: 13px; }
+  .value { margin-top: 2px; }
+  .num { font-size: 28px; font-weight: 600; line-height: 1.15; }
+  .num.words { font-size: 16px; }
+  .unit { color: var(--ink-2); font-size: 13px; }
+  .caption { min-height: 16px; margin-top: 4px; color: var(--ink-2); font-size: 12px; }
+
+  /* Trend line: quiet grey, with only the latest point in the accent colour. */
+  .spark { display: block; width: 100%; height: 32px; margin-top: 8px; overflow: visible; touch-action: pan-y; }
+  .spark path, .spark line { fill: none; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+  .trend { stroke: var(--trend); stroke-width: 2; }
+  .ring { stroke: var(--surface); stroke-width: 12; }
+  .dot { stroke: var(--accent); stroke-width: 8; }
+  .cross { stroke: var(--ink-2); stroke-width: 1; }
+
+  .kinds { display: grid; grid-template-columns: max-content 1fr; gap: 8px 14px; margin: 0; }
+  .kinds dt { color: var(--ink-2); }
+  .kinds dd { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+  .code {
+    padding: 1px 8px; border: 1px solid var(--border); border-radius: 6px;
+    font: 600 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .rows { margin: 8px 0 0; padding: 0; list-style: none; }
+  .rows li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--hairline); }
+  .rows .figure { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rows .state { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .session { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>cardiag</h1>
+    <div class="link" role="status">
+      <span class="icon warning" id="link-icon">…</span><span id="link-text">Connecting</span>
+    </div>
+  </header>
+  <p class="link-detail" id="link-detail"></p>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-live" aria-selected="true">Live</button>
+    <button role="tab" id="tab-codes" aria-selected="false">Codes</button>
+    <button role="tab" id="tab-readiness" aria-selected="false">Readiness</button>
+    <button role="tab" id="tab-sessions" aria-selected="false">Recordings</button>
+  </nav>
+
+  <main>
+    <section id="panel-live">
+      <div class="toolbar">
+        <input id="note" type="text" maxlength="120" placeholder="Note for this recording (optional)" aria-label="Note for this recording">
+        <button class="primary" id="record" disabled>Start recording</button>
+        <span class="secondary small" id="record-status"></span>
+      </div>
+      <details id="chooser">
+        <summary>Choose values</summary>
+        <div class="choices" id="chooser-list"></div>
+        <p class="secondary small" id="chooser-status"></p>
+      </details>
+      <div class="tiles" id="tiles"></div>
+      <p class="secondary" id="live-empty">Waiting for data from the car.</p>
+    </section>
+
+    <section id="panel-codes" hidden>
+      <button class="primary" id="read-codes">Read codes</button>
+      <div id="codes"></div>
+    </section>
+
+    <section id="panel-readiness" hidden>
+      <button class="primary" id="read-monitors">Check readiness</button>
+      <div id="monitors"></div>
+    </section>
+
+    <section id="panel-sessions" hidden>
+      <div id="sessions"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+"use strict";
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+const SVG_TAGS = new Set(["svg", "path", "line"]);
+const HISTORY = 240;       // points kept per value: about a minute at four updates a second
+const MISSED_LIMIT = 8;    // updates a value may skip before its tile is removed
+const SPARK_W = 100;       // trend-line drawing box; it stretches to the tile's width
+const SPARK_H = 32;
+const SPARK_PLOT_W = 96;   // leaves room at the right edge for the latest-point dot
+const SPARK_PAD = 5;
+const GLYPH = { good: "✓", warning: "!", critical: "✕" };
+const TABS = ["live", "codes", "readiness", "sessions"];
+const KINDS = [["stored", "Stored"], ["pending", "Pending"], ["permanent", "Permanent"]];
+
+const $ = (id) => document.getElementById(id);
+
+/* Build an element: el("div", {class: "x", onclick: fn}, child, "text", [more]). */
+function el(tag, attrs, ...children) {
+  const node = SVG_TAGS.has(tag) ? document.createElementNS(SVG_NS, tag) : document.createElement(tag);
+  for (const [name, value] of Object.entries(attrs || {})) {
+    if (name.startsWith("on")) node.addEventListener(name.slice(2), value);
+    else if (value !== null && value !== undefined && value !== false) node.setAttribute(name, String(value));
+  }
+  for (const child of children.flat(Infinity)) {
+    if (child === null || child === undefined || child === false) continue;
+    node.append(typeof child === "object" ? child : document.createTextNode(String(child)));
+  }
+  return node;
+}
+
+function fmt(value) {
+  if (typeof value !== "number") return String(value);
+  const size = Math.abs(value);
+  if (Number.isInteger(value) || size >= 100) return Math.round(value).toLocaleString("en-US");
+  return value.toFixed(size >= 10 ? 1 : 2);
+}
+
+function fmtDuration(seconds) {
+  const whole = Math.max(0, Math.round(seconds));
+  if (whole < 60) return whole + " s";
+  if (whole < 3600) return Math.floor(whole / 60) + " min " + (whole % 60) + " s";
+  return Math.floor(whole / 3600) + " h " + Math.floor((whole % 3600) / 60) + " min";
+}
+
+function statusLine(kind, text) {
+  return el("div", { class: "status" }, el("span", { class: "icon " + kind }, GLYPH[kind]), text);
+}
+
+function problem(text) {
+  return statusLine("critical", text);
+}
+
+async function api(path, body) {
+  try {
+    const options = body === undefined
+      ? {}
+      : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+    const response = await fetch(path, options);
+    return await response.json();
+  } catch (error) {
+    return { error: "Could not reach the app. Is it still running?" };
+  }
+}
+
+/* ---- connection status ------------------------------------------------- */
+
+let current = null;      // latest status from the server
+let lastState = null;
+
+function showLink(kind, glyph, text, detail) {
+  $("link-icon").setAttribute("class", "icon " + kind);
+  $("link-icon").textContent = glyph;
+  $("link-text").textContent = text;
+  $("link-detail").textContent = detail || "";
+}
+
+function showStatus(status) {
+  current = status;
+  if (status.state === "connected") {
+    const facts = [status.vin ? "VIN " + status.vin : null, status.network, status.modules.join(", ")];
+    showLink("good", GLYPH.good, "Connected", facts.filter(Boolean).join(" · "));
+  } else if (status.state === "no_vehicle") {
+    showLink("warning", GLYPH.warning, "Waiting for the car", status.message);
+  } else if (status.state === "no_adapter") {
+    showLink("critical", GLYPH.critical, "No adapter", status.message);
+  } else {
+    showLink("warning", "…", "Starting", "");
+  }
+
+  const recording = status.recording;
+  $("record").textContent = recording ? "Stop recording" : "Start recording";
+  $("record").disabled = status.state !== "connected";
+  $("note").hidden = Boolean(recording);
+  $("record-status").textContent = recording
+    ? "Recording " + recording.session + " · " + fmtDuration(recording.seconds)
+    : "";
+
+  if (status.state !== lastState) {
+    lastState = status.state;
+    if (status.state === "connected") loadChoices();
+    else clearTiles();
+  }
+}
+
+function showOffline() {
+  current = null;
+  lastState = null;
+  showLink("critical", GLYPH.critical, "App not reachable", "Trying again…");
+  $("record").disabled = true;
+  clearTiles();
+}
+
+/* ---- live tiles -------------------------------------------------------- */
+
+const tiles = new Map();  // signal key -> tile
+
+function sparkGeometry(values) {
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const span = high - low;
+  const x = (i) => (values.length === 1 ? SPARK_PLOT_W : (i / (values.length - 1)) * SPARK_PLOT_W);
+  const y = (v) => (span === 0 ? SPARK_H / 2 : SPARK_H - SPARK_PAD - ((v - low) / span) * (SPARK_H - 2 * SPARK_PAD));
+  const at = (i) => x(i).toFixed(2) + " " + y(values[i]).toFixed(2);
+  return { low, high, x, at, path: values.map((v, i) => (i ? "L" : "M") + at(i)).join(" ") };
+}
+
+function buildTile(reading) {
+  const numeric = typeof reading.value === "number";
+  const tile = {
+    numeric,
+    unit: reading.unit,
+    history: [],     // {t, value}
+    hover: null,     // 0..1 across the trend line while the pointer is over it
+    missed: 0,
+    num: el("span", { class: numeric ? "num" : "num words" }),
+    caption: el("div", { class: "caption" }),
+  };
+  let chart = null;
+  if (numeric) {
+    tile.cross = el("line", { class: "cross", y1: 0, y2: SPARK_H, visibility: "hidden" });
+    tile.trend = el("path", { class: "trend" });
+    tile.ring = el("path", { class: "ring" });
+    tile.dot = el("path", { class: "dot" });
+    chart = el("svg", {
+      class: "spark",
+      viewBox: "0 0 " + SPARK_W + " " + SPARK_H,
+      preserveAspectRatio: "none",
+      role: "img",
+      "aria-label": reading.name + ", recent trend",
+      onpointermove: (event) => {
+        const box = event.currentTarget.getBoundingClientRect();
+        if (!box.width) return;
+        const across = (event.clientX - box.left) / box.width * (SPARK_W / SPARK_PLOT_W);
+        tile.hover = Math.min(1, Math.max(0, across));
+        drawTile(tile);
+      },
+      onpointerleave: () => {
+        tile.hover = null;
+        drawTile(tile);
+      },
+    }, tile.cross, tile.trend, tile.ring, tile.dot);
+  }
+  tile.root = el("div", { class: "tile" },
+    el("div", { class: "label" }, reading.name),
+    el("div", { class: "value" }, tile.num, " ", el("span", { class: "unit" }, reading.unit)),
+    chart,
+    tile.caption);
+  return tile;
+}
+
+function drawTile(tile) {
+  const latest = tile.history[tile.history.length - 1];
+  tile.num.textContent = fmt(latest.value);
+  if (!tile.numeric) return;
+
+  const values = tile.history.map((point) => point.value);
+  const shape = sparkGeometry(values);
+  const end = "M" + shape.at(values.length - 1) + "h0.01";  // a dot: zero-length line with round caps
+  tile.trend.setAttribute("d", shape.path);
+  tile.ring.setAttribute("d", end);
+  tile.dot.setAttribute("d", end);
+
+  if (tile.hover === null || values.length < 2) {
+    tile.cross.setAttribute("visibility", "hidden");
+    tile.caption.textContent = values.length < 2
+      ? ""
+      : fmt(shape.low) + " to " + fmt(shape.high) + " over " + fmtDuration(latest.t - tile.history[0].t);
+  } else {
+    const index = Math.round(tile.hover * (values.length - 1));
+    const point = tile.history[index];
+    const cx = shape.x(index).toFixed(2);
+    tile.cross.setAttribute("x1", cx);
+    tile.cross.setAttribute("x2", cx);
+    tile.cross.setAttribute("visibility", "visible");
+    tile.caption.textContent =
+      (fmt(point.value) + " " + tile.unit).trim() + ", " + fmtDuration(latest.t - point.t) + " ago";
+  }
+}
+
+function clearTiles() {
+  tiles.clear();
+  $("tiles").replaceChildren();
+  $("live-empty").hidden = false;
+}
+
+function showLive(payload) {
+  const present = new Set(payload.readings.map((reading) => reading.key));
+  let changed = false;
+  for (const reading of payload.readings) {
+    if (!tiles.has(reading.key)) {
+      tiles.set(reading.key, buildTile(reading));
+      changed = true;
+    }
+  }
+  // A value can skip an update now and then; only drop its tile once it stays away.
+  for (const [key, tile] of tiles) {
+    if (present.has(key)) tile.missed = 0;
+    else if (++tile.missed > MISSED_LIMIT) {
+      tiles.delete(key);
+      changed = true;
+    }
+  }
+  if (changed) $("tiles").replaceChildren(...[...tiles.values()].map((tile) => tile.root));
+
+  for (const reading of payload.readings) {
+    const tile = tiles.get(reading.key);
+    tile.history.push({ t: payload.elapsed, value: reading.value });
+    if (tile.history.length > HISTORY) tile.history.shift();
+    drawTile(tile);
+  }
+  $("live-empty").hidden = tiles.size > 0;
+}
+
+/* ---- recording and choosing values -------------------------------------- */
+
+async function toggleRecording() {
+  const recording = current && current.recording;
+  const request = recording ? { action: "stop" } : { action: "start", note: $("note").value };
+  const result = await api("/api/record", request);
+  if (result.error) {
+    $("record-status").textContent = result.error;
+    return;
+  }
+  if (!recording) $("note").value = "";
+  showStatus(result);
+}
+
+let choices = [];  // {pid, box}
+
+async function loadChoices() {
+  const values = await api("/api/values");
+  if (values.error) return;
+  const watched = new Set(values.watched);
+  choices = values.available.map((value) => {
+    const box = el("input", { type: "checkbox", onchange: saveChoices });
+    box.checked = watched.has(value.pid);
+    return { pid: value.pid, box, row: el("label", { class: "choice" }, box, value.name) };
+  });
+  $("chooser-list").replaceChildren(...choices.map((choice) => choice.row));
+  $("chooser-status").textContent = "";
+}
+
+async function saveChoices() {
+  const pids = choices.filter((choice) => choice.box.checked).map((choice) => choice.pid);
+  const result = await api("/api/watch", { pids });
+  $("chooser-status").textContent = result.error || "";
+}
+
+/* ---- codes ------------------------------------------------------------- */
+
+function codeList(codes) {
+  if (codes === null || codes === undefined) return el("span", { class: "secondary" }, "Not reported by this module");
+  if (!codes.length) return el("span", { class: "secondary" }, "None");
+  return codes.map((code) => el("span", { class: "code" }, code));
+}
+
+async function readCodes() {
+  const box = $("codes");
+  box.replaceChildren(el("p", { class: "secondary" }, "Reading codes…"));
+  const report = await api("/api/codes");
+  if (report.error) {
+    box.replaceChildren(problem(report.error));
+    return;
+  }
+  const parts = [];
+  if (report.mil_on !== null) {
+    parts.push(report.mil_on
+      ? statusLine("warning", "Check-engine light is on")
+      : statusLine("good", "Check-engine light is off"));
+  }
+  if (!report.modules.length) {
+    parts.push(el("p", { class: "secondary" }, "No module answered the trouble-code requests."));
+  }
+  for (const module of report.modules) {
+    parts.push(el("div", { class: "card" },
+      el("h3", null, module.label),
+      el("dl", { class: "kinds" },
+        KINDS.map(([kind, label]) => [el("dt", null, label), el("dd", null, codeList(module[kind]))]))));
+  }
+  const frame = report.freeze_frame;
+  if (frame) {
+    parts.push(el("div", { class: "card" },
+      el("h3", null, "Freeze frame for " + frame.dtc),
+      el("div", { class: "secondary small" }, "What " + frame.label + " recorded when it set the code."),
+      el("ul", { class: "rows" }, frame.readings.map((reading) =>
+        el("li", null,
+          el("span", null, reading.name),
+          el("span", { class: "figure" }, (fmt(reading.value) + " " + reading.unit).trim()))))));
+  }
+  box.replaceChildren(...parts);
+}
+
+/* ---- readiness ----------------------------------------------------------- */
+
+async function readMonitors() {
+  const box = $("monitors");
+  box.replaceChildren(el("p", { class: "secondary" }, "Checking readiness…"));
+  const report = await api("/api/monitors");
+  if (report.error) {
+    box.replaceChildren(problem(report.error));
+    return;
+  }
+  if (!report.length) {
+    box.replaceChildren(el("p", { class: "secondary" }, "No module reported readiness status."));
+    return;
+  }
+  box.replaceChildren(...report.map((module) => {
+    const codes = module.dtc_count + (module.dtc_count === 1 ? " code" : " codes") + " stored";
+    return el("div", { class: "card" },
+      el("h3", null, module.label),
+      el("div", { class: "secondary small" },
+        "Check-engine light " + (module.mil_on ? "on" : "off") + ", " + codes + ", " + module.ignition + " ignition"),
+      el("ul", { class: "rows" }, module.monitors.map((monitor) =>
+        el("li", null,
+          el("span", null, monitor.name),
+          el("span", { class: "state" },
+            el("span", { class: "icon " + (monitor.complete ? "good" : "warning") },
+              monitor.complete ? GLYPH.good : GLYPH.warning),
+            monitor.complete ? "Complete" : "Not complete")))));
+  }));
+}
+
+/* ---- recordings ---------------------------------------------------------- */
+
+async function loadSessions() {
+  const box = $("sessions");
+  const list = await api("/api/sessions");
+  if (list.error) {
+    box.replaceChildren(problem(list.error));
+    return;
+  }
+  if (!list.length) {
+    box.replaceChildren(el("p", { class: "secondary" }, "No recordings yet. Start one from the Live tab."));
+    return;
+  }
+  box.replaceChildren(...list.slice().reverse().map((session) => {
+    const length = session.ended_at === null ? "not finished" : fmtDuration(session.ended_at - session.started_at);
+    const facts = [new Date(session.started_at * 1000).toLocaleString(), length, session.passes + " updates"];
+    if (session.vin) facts.push("VIN " + session.vin);
+    return el("div", { class: "card session" },
+      el("div", null,
+        el("h3", null, "Recording " + session.id + (session.note ? ": " + session.note : "")),
+        el("div", { class: "secondary small" }, facts.join(" · "))),
+      el("a", { class: "button", href: "/api/sessions/" + session.id + ".csv", download: "" }, "Download CSV"));
+  }));
+}
+
+/* ---- wiring -------------------------------------------------------------- */
+
+function showTab(name) {
+  for (const tab of TABS) {
+    $("tab-" + tab).setAttribute("aria-selected", String(tab === name));
+    $("panel-" + tab).hidden = tab !== name;
+  }
+  if (name === "sessions") loadSessions();
+}
+
+for (const tab of TABS) $("tab-" + tab).addEventListener("click", () => showTab(tab));
+$("record").addEventListener("click", toggleRecording);
+$("read-codes").addEventListener("click", readCodes);
+$("read-monitors").addEventListener("click", readMonitors);
+
+const stream = new EventSource("/api/stream");  // reconnects by itself after a dropout
+stream.onmessage = (event) => {
+  const payload = JSON.parse(event.data);
+  showStatus(payload.status);
+  if (payload.status.state === "connected") showLive(payload);
+};
+stream.onerror = showOffline;
+</script>
+</body>
+</html>
