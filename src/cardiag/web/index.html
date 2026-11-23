@@ -67,8 +67,8 @@
   }
   .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   h1 { margin: 0; font: 600 22px/1 var(--cond); letter-spacing: 0.02em; }
-  h3 { margin: 0 0 8px; font: 600 14px/1.2 var(--cond); letter-spacing: 0.06em; text-transform: uppercase; }
-  h4 { margin: 14px 0 6px; font: 600 12px/1.2 var(--cond); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+  h2 { margin: 0 0 8px; font: 600 14px/1.2 var(--cond); letter-spacing: 0.06em; text-transform: uppercase; }
+  h3 { margin: 14px 0 6px; font: 600 12px/1.2 var(--cond); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
   .link, .status { display: flex; align-items: center; gap: 8px; font-weight: 600; }
   .link { min-height: 32px; padding: 0 12px; border: 1px solid var(--hairline); border-radius: 999px; background: var(--surface); font-size: 13px; }
   .status { margin-top: 10px; font-size: 14px; }
@@ -88,7 +88,7 @@
   .icon.good { background: var(--good); }
   .icon.warning { background: var(--warning); }
   .icon.critical { background: var(--critical); }
-  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 3px; font-size: 12px; font-weight: 600; white-space: nowrap; }
   .chip.ok { padding-left: 0; color: var(--ink-2); font-weight: 400; }
   .chip.warning { background: var(--warning-fill); color: var(--warning); }
 
@@ -133,7 +133,7 @@
   .grid .card { flex: 1 1 380px; margin-top: 0; }
   .grid .wide { flex-basis: 100%; }
   .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 8px; }
-  .head h3 { margin: 0; }
+  .head h2 { margin: 0; }
   .label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-height: 27px; font: 600 11px/1.2 var(--cond); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
   .pid { flex: none; font: 400 11px var(--mono); letter-spacing: 0; color: var(--ink-3); }
   .value { margin-top: 4px; }
@@ -184,7 +184,7 @@
   .barrow .figure { flex: 0 0 64px; text-align: right; font: 600 13px var(--mono); }
   .barrow .secondary { flex: 0 0 auto; white-space: nowrap; font-size: 12px; }
   .map { display: grid; gap: 4px; min-width: 620px; }
-  .cell { min-height: 46px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 3px 6px; border: 1px solid var(--hairline); border-radius: 3px; font: 600 13px var(--mono); }
+  .cell { min-height: 46px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 5px 8px; border: 1px solid var(--hairline); border-radius: 3px; font: 600 13px var(--mono); }
   .cell small { font: 400 11px var(--mono); color: var(--ink-2); }
   .cell.empty { border-style: dashed; color: var(--ink-3); font-weight: 400; font-size: 11px; }
   .cell.mark { border: 2px solid var(--ink); }
@@ -207,7 +207,7 @@
   .kinds dt { color: var(--ink-2); }
   .kinds dd { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
   .code {
-    padding: 1px 7px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface-2);
+    padding: 2px 8px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface-2);
     font: 600 13px var(--mono);
   }
   .rows { margin: 8px 0 0; padding: 0; list-style: none; }
@@ -279,7 +279,7 @@
 
     <section id="panel-drive" hidden>
       <div class="card">
-        <div class="head"><h3>Drive capture</h3><span class="secondary small">Reads only the values shifting needs, so each is read more often</span></div>
+        <div class="head"><h2>Drive capture</h2><span class="secondary small">Reads only the values shifting needs, so each is read more often</span></div>
         <div class="toolbar">
           <button class="primary" id="capture" disabled>Start a drive capture</button>
           <span class="secondary small" id="capture-note"></span>
@@ -292,15 +292,15 @@
       <p class="secondary" id="setup-empty">Connect to the car to set it up. Setup is kept per car.</p>
       <div id="setup-steps" hidden>
         <div class="card">
-          <h3><span class="step">1</span>Adapter and car</h3>
+          <h2><span class="step">1</span>Adapter and car</h2>
           <div id="setup-car"></div>
         </div>
         <div class="card">
-          <h3><span class="step">2</span>What the car offers</h3>
+          <h2><span class="step">2</span>What the car offers</h2>
           <div id="setup-offers"></div>
         </div>
         <div class="card">
-          <h3><span class="step">3</span>Car profile</h3>
+          <h2><span class="step">3</span>Car profile</h2>
           <p class="secondary small">The car does not report its engine size or transmission. The air flow check needs the first; the Drive page words its findings by the second.</p>
           <div class="toolbar">
             <input id="setup-litres" type="text" inputmode="decimal" maxlength="5" placeholder="Engine size in litres, e.g. 2.0" aria-label="Engine size in litres">
@@ -311,7 +311,7 @@
           <p class="secondary small" id="setup-profile-note"></p>
         </div>
         <div class="card">
-          <h3><span class="step">4</span>Idle baseline</h3>
+          <h2><span class="step">4</span>Idle baseline</h2>
           <p class="secondary small">Park with the engine warm, air conditioning and lights off, and leave it idling. After a minute the averages are kept as this car's own healthy bands.</p>
           <label class="check"><input id="baseline-good" type="checkbox">The car is running well right now, with no faults I know of</label>
           <div class="toolbar">
@@ -321,7 +321,7 @@
           <div id="baseline-state"></div>
         </div>
         <div class="card">
-          <h3><span class="step">5</span>Gear learning</h3>
+          <h2><span class="step">5</span>Gear learning</h2>
           <p class="secondary small">Drive gently and hold a steady speed for a few seconds in each gear, starting from first. A light foot keeps the clutches locked, which is what the gear lines need. Then learn from that drive, live or from a recording of it.</p>
           <div class="toolbar">
             <select id="gears-source" aria-label="Drive to learn from"></select>
@@ -332,7 +332,7 @@
           <div id="gears-state"></div>
         </div>
         <div class="card">
-          <h3>Ready to use</h3>
+          <h2>Ready to use</h2>
           <div id="setup-summary"></div>
         </div>
       </div>
@@ -344,19 +344,19 @@
 
     <section id="panel-settings" hidden>
       <div class="card">
-        <h3>Data source</h3>
+        <h2>Data source</h2>
         <div id="source-state"></div>
         <div class="toolbar" id="sources"></div>
         <p class="secondary small">A simulated car shows made-up data, for trying the app without a car. The app goes back to the real car whenever it restarts.</p>
       </div>
 
       <div class="card" id="wifi-card" hidden>
-        <h3>Wi-Fi</h3>
+        <h2>Wi-Fi</h2>
         <div id="wifi-state"></div>
         <div class="toolbar">
           <button class="primary" id="wifi-hotspot" hidden>Switch back to the hotspot</button>
         </div>
-        <h4>Home network</h4>
+        <h3>Home network</h3>
         <div id="wifi-saved" hidden>
           <div class="toolbar">
             <button class="primary" id="wifi-join">Join</button>
@@ -375,7 +375,7 @@
             <button class="primary" id="wifi-save">Save</button>
           </div>
         </div>
-        <h4>Travelling hotspot</h4>
+        <h3>Travelling hotspot</h3>
         <div id="uplink-state"></div>
         <div id="uplink-saved" hidden>
           <div class="toolbar">
@@ -395,7 +395,7 @@
       </div>
 
       <div class="card" id="central-card" hidden>
-        <h3>Central server</h3>
+        <h2>Central server</h2>
         <div id="central-state"></div>
         <p class="secondary small">Finished recordings are sent to another copy of cardiag, started with --accept-uploads, whenever this box can reach it. There is no login, so use an address on a private network such as Tailscale.</p>
         <div class="toolbar">
@@ -406,7 +406,7 @@
       </div>
 
       <div class="card">
-        <h3>Software</h3>
+        <h2>Software</h2>
         <div class="status" id="update-version"></div>
         <div id="update-state"></div>
         <p class="secondary small notes" id="update-notes"></p>
@@ -756,14 +756,14 @@ async function readCodes() {
   }
   for (const module of report.modules) {
     parts.push(el("div", { class: "card" },
-      el("h3", null, module.label),
+      el("h2", null, module.label),
       el("dl", { class: "kinds" },
         KINDS.map(([kind, label]) => [el("dt", null, label), el("dd", null, codeList(module[kind]))]))));
   }
   const frame = report.freeze_frame;
   if (frame) {
     parts.push(el("div", { class: "card" },
-      el("h3", null, "Freeze frame for " + frame.dtc),
+      el("h2", null, "Freeze frame for " + frame.dtc),
       el("div", { class: "secondary small" }, "What " + frame.label + " recorded when it set the code."),
       el("ul", { class: "rows" }, frame.readings.map((reading) =>
         el("li", null,
@@ -793,7 +793,7 @@ async function readMonitors() {
   box.replaceChildren(...report.map((module) => {
     const codes = module.dtc_count + (module.dtc_count === 1 ? " code" : " codes") + " stored";
     return el("div", { class: "card" },
-      el("h3", null, module.label),
+      el("h2", null, module.label),
       el("div", { class: "secondary small" },
         "Check-engine light " + (module.mil_on ? "on" : "off") + ", " + codes + ", " + module.ignition + " ignition"),
       el("ul", { class: "rows" }, module.monitors.map((monitor) =>
@@ -827,7 +827,7 @@ async function loadSessions() {
     if (session.sent) facts.push("sent to the central server");
     return el("div", { class: "card session" },
       el("div", null,
-        el("h3", null, "Recording " + session.id + (session.note ? ": " + session.note : "")),
+        el("h2", null, "Recording " + session.id + (session.note ? ": " + session.note : "")),
         el("div", { class: "secondary small" }, facts.join(" · "))),
       el("a", { class: "button", href: "/api/sessions/" + session.id + ".csv", download: "" }, "Download CSV"));
   }));
@@ -1074,7 +1074,7 @@ async function loadReport() {
 
 function card(title, sub, ...body) {
   return el("div", { class: "card" },
-    el("div", { class: "head" }, el("h3", null, title), sub ? el("span", { class: "secondary small" }, sub) : null),
+    el("div", { class: "head" }, el("h2", null, title), sub ? el("span", { class: "secondary small" }, sub) : null),
     body);
 }
 
@@ -1580,10 +1580,10 @@ function renderSetup() {
 
   $("setup-offers").replaceChildren(
     ...setup.offered.flatMap((module) => [
-      el("h4", null, module.module + ": " + module.values.length + (module.values.length === 1 ? " value" : " values")),
+      el("h3", null, module.module + ": " + module.values.length + (module.values.length === 1 ? " value" : " values")),
       el("div", { class: "offers" }, module.values.map((value) => el("div", null, el("span", null, value.pid), value.name))),
     ]),
-    el("h4", null, "Values the Diagnosis and Drive tabs want"),
+    el("h3", null, "Values the Diagnosis and Drive tabs want"),
     table(["Value", "PID", "This car", "Without it"], setup.wanted.map((row) => el("tr", null,
       td(row.name), td(row.pids.join(", "), "mono"), td(chip(row.offered, row.offered ? "Offered" : "Not offered")),
       td(row.offered ? "" : row.without, "wrap")))));
