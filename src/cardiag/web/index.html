@@ -332,6 +332,39 @@
           <div id="gears-state"></div>
         </div>
         <div class="card">
+          <h2><span class="step">6</span>Values only this maker has</h2>
+          <p class="secondary small">Modules keep figures beyond the standard set: a dual-clutch gearbox knows its own clutch slip, its clutch temperature and the gear it wants. Makers do not publish where these are kept, so each one is an identifier to find and a rule for turning its bytes into a number, checked against the car. Reading them is a read, like everything else cardiag sends.</p>
+          <p class="secondary small" id="maker-empty" hidden>cardiag reads these on 11-bit CAN networks only so far, and this car is on another kind.</p>
+          <div id="maker-steps">
+            <div id="maker-values"></div>
+            <div class="toolbar" id="maker-candidates"></div>
+            <h3>Add a value</h3>
+            <div class="toolbar">
+              <select id="maker-module" aria-label="Module"></select>
+              <input id="maker-id" type="text" maxlength="4" autocapitalize="characters" autocomplete="off" placeholder="Identifier, e.g. 1EBB" aria-label="Identifier">
+              <input id="maker-name" type="text" maxlength="60" placeholder="Name" aria-label="Name">
+              <input id="maker-unit" type="text" maxlength="12" placeholder="Unit" aria-label="Unit">
+            </div>
+            <div class="toolbar">
+              <select id="maker-size" aria-label="Number of bytes"></select>
+              <label class="check"><input id="maker-signed" type="checkbox">Can be negative</label>
+              <input id="maker-scale" type="text" inputmode="decimal" placeholder="Multiply by (1)" aria-label="Multiply by">
+              <input id="maker-offset" type="text" inputmode="decimal" placeholder="Then add (0)" aria-label="Then add">
+              <button class="primary" id="maker-add">Add</button>
+            </div>
+            <p class="secondary small" id="maker-note"></p>
+            <h3>Find what a module answers</h3>
+            <p class="secondary small">Asks the module chosen above for a run of identifiers and lists the ones it has, with their bytes. Do it parked, with the engine running. Then change one thing (select a gear, let the car warm up), scan again, and see which bytes moved: that is how a value is recognised.</p>
+            <div class="toolbar">
+              <input id="scan-first" type="text" maxlength="4" autocapitalize="characters" autocomplete="off" placeholder="Start at, e.g. 1E00" aria-label="First identifier">
+              <select id="scan-count" aria-label="How many identifiers"></select>
+              <button class="primary" id="scan-start">Scan</button>
+              <span class="secondary small" id="scan-note"></span>
+            </div>
+            <div id="scan-results"></div>
+          </div>
+        </div>
+        <div class="card">
           <h2>Ready to use</h2>
           <div id="setup-summary"></div>
         </div>
@@ -392,6 +425,16 @@
           </div>
         </div>
         <p class="secondary small" id="wifi-note"></p>
+      </div>
+
+      <div class="card">
+        <h2>Polling</h2>
+        <div class="status" id="interval-state"></div>
+        <p class="secondary small">How often the watched values are read. The car sets the ceiling: each value takes a moment to answer, so watching fewer values gives more updates a second.</p>
+        <div class="toolbar">
+          <select id="interval" aria-label="Time between updates"></select>
+        </div>
+        <p class="secondary small" id="interval-note"></p>
       </div>
 
       <div class="card" id="central-card" hidden>
@@ -524,6 +567,7 @@ function showStatus(status) {
   $("record").textContent = recording ? "Stop recording" : "Start recording";
   $("record").disabled = status.state !== "connected";
   $("capture").disabled = status.state !== "connected";
+  showInterval(status);
   $("note").hidden = Boolean(recording);
   $("record-status").textContent = recording
     ? "Recording " + recording.session + " · " + fmtDuration(recording.seconds)
@@ -719,6 +763,11 @@ function clearReports() {
   report = null;
   setup = null;
   capture = null;
+  maker = null;
+  scanning = false;
+  lastScan.clear();
+  $("scan-results").replaceChildren();
+  $("scan-note").textContent = "";
   $("codes").replaceChildren();
   $("monitors").replaceChildren();
   $("diagnosis").replaceChildren();
@@ -1354,7 +1403,7 @@ function renderDrive() {
       "The dots below are real, but there are no gear lines to judge them against. Learn the gears in Setup, step 5."))),
     gearMapCard(drive), gearTimeCard(drive),
     learned ? shiftsCard(drive) : null, learned && drive.shifts.length ? shiftDetailCard(drive) : null,
-    learned ? slipCard(drive) : null, pullCard(), limitsCard()));
+    learned ? slipCard(drive) : null, makerCard(), pullCard(), limitsCard()));
 }
 
 function gearMapCard(drive) {
@@ -1501,11 +1550,26 @@ function pullCard() {
       + "Compare spans driven at similar effort. Pick a known-good recording under Against to see what has changed.")));
 }
 
+/* Values read from the modules themselves, where any have been set up. */
+function makerCard() {
+  if (!report.maker || !report.maker.length) return null;
+  const total = report.seconds || 1;
+  const sx = scaler(0, total, 400, 0);
+  return wide(card("From the modules themselves", "Maker-specific values set up for this car, on the same time axis",
+    report.maker.map((value) => el("div", { class: "trace" },
+      el("span", { class: "lbl" }, value.name),
+      plot(40, 400, 40, value.name + " over time",
+        stroke("p-line", linePath(value.trace, sx, scaler(Math.min(0, value.low), Math.max(1, value.high), 40, 3, true)))),
+      el("span", { class: "secondary small mono" }, fmt(value.low) + " to " + fmt(value.high) + " " + value.unit))),
+    axis("0 s", fmtDuration(total)),
+    reading("These are what the module itself reports, read as you defined them in Setup. They are only as right as that definition.")));
+}
+
 function limitsCard() {
   return card("What this cannot see", "Limits of standard OBD-II",
     el("ul", { class: "plain" },
-      el("li", null, "The car does not report its gear, clutch state or transmission temperature over standard requests. Everything here is worked out from engine speed and road speed."),
-      el("li", null, "The transmission module's own slip figures, clutch temperature and commanded gear need maker-specific requests, which cardiag does not send."),
+      el("li", null, "The car does not report its gear, clutch state or transmission temperature over standard requests. The gear map, shifts and slip above are worked out from engine speed and road speed."),
+      el("li", null, "The transmission module's own slip figures, clutch temperature and commanded gear are maker-specific. Setup, step 6, can read them once their identifiers are found."),
       el("li", null, "A shudder faster than about half the update rate will not show. A drive capture reads fewer values so that each is read more often."),
       el("li", null, "Road speed arrives in whole km/h, so the ratio is coarse at low speed and first gear is the hardest to learn.")));
 }
@@ -1666,6 +1730,148 @@ async function changeGears(request) {
   renderSetup();
 }
 
+/* ---- setup: values only this maker has ---------------------------------------------- */
+
+let maker = null;            // latest report of the maker-specific values set up for this car
+let scanning = false;        // whether a scan is running; pressing the button again stops it
+const lastScan = new Map();  // "module:identifier" -> bytes at the scan before, to show what moved
+
+async function loadMaker() {
+  const epoch = reportEpoch;
+  const result = await api("/api/maker");
+  if (epoch !== reportEpoch) return;
+  if (result.error) $("maker-note").textContent = capital(result.error) + ".";
+  else showMaker(result);
+}
+
+function showMaker(found) {
+  maker = found;
+  $("maker-empty").hidden = found.supported;
+  $("maker-steps").hidden = !found.supported;
+  const gearbox = found.modules.find((module) => module.name.startsWith("Transmission"));
+  const chosen = $("maker-module").value;
+  fillSelect($("maker-module"), found.modules.map((module) => [module.reply, module.name]));
+  if (!chosen && gearbox) $("maker-module").value = gearbox.reply;
+  fillSelect($("maker-size"), [["1", "1 byte"], ["2", "2 bytes"], ["3", "3 bytes"], ["4", "4 bytes"]]);
+  fillSelect($("scan-count"), [["64", "64 identifiers"], ["256", "256 identifiers"], ["1024", "1,024 identifiers"], ["4096", "4,096 identifiers"]]);
+
+  const rule = (value) => value.size + (value.size === 1 ? " byte" : " bytes") + (value.signed ? ", can be negative" : "")
+    + ", times " + value.scale + (value.offset ? (value.offset > 0 ? ", plus " : ", minus ") + Math.abs(value.offset) : "");
+  $("maker-values").replaceChildren(found.values.length
+    ? table(["Name", "Module", "Identifier", "Rule", "Unit", ""], found.values.map((value) => el("tr", null,
+      td(value.name), td(value.module, "mono"), td(value.id, "mono"), td(rule(value)), td(value.unit),
+      td(el("button", {
+        class: "quiet slim",
+        onclick: () => saveMaker(maker.values.filter((other) => other.key !== value.key)),
+      }, "Remove")))))
+    : el("p", { class: "secondary small" }, "None set up yet. Values you add are read on every update, shown on the Live tab and kept in recordings."));
+  $("maker-candidates").replaceChildren(...found.candidates.map((candidate) =>
+    el("button", { class: "quiet", onclick: () => saveMaker(maker.values.concat([candidate])) },
+      "Try " + candidate.name + " (" + candidate.id + ")")),
+    ...(found.candidates.length ? [el("span", { class: "secondary small" },
+      "From an owners' forum for this gearbox, not from the maker. Check them against the car.")] : []));
+}
+
+async function saveMaker(values) {
+  const result = await api("/api/maker/values", { values });
+  $("maker-note").textContent = result.error ? capital(result.error) + "." : "";
+  if (result.error) return false;
+  showMaker(result);
+  return true;
+}
+
+async function addMaker() {
+  if (!maker) return;
+  const number = (id, otherwise) => ($(id).value.trim() === "" ? otherwise : Number($(id).value));
+  const added = await saveMaker(maker.values.concat([{
+    module: $("maker-module").value, id: $("maker-id").value.trim().toUpperCase(), name: $("maker-name").value,
+    unit: $("maker-unit").value, size: Number($("maker-size").value), signed: $("maker-signed").checked,
+    scale: number("maker-scale", 1), offset: number("maker-offset", 0),
+  }]));
+  if (added) for (const id of ["maker-id", "maker-name", "maker-unit", "maker-scale", "maker-offset"]) $(id).value = "";
+}
+
+function drawScan(module, found) {
+  $("scan-results").replaceChildren(found.length ? table(["Identifier", "Bytes", "#As a whole number", "Since the last scan", ""],
+    found.map((item) => {
+      const before = lastScan.get(module + ":" + item.id);
+      const moved = before !== undefined && before !== item.data;
+      return el("tr", null,
+        td(item.id, "mono"), td(item.data.replace(/(..)/g, "$1 ").trim(), "mono"),
+        td(item.data.length <= 8 ? fmt(parseInt(item.data, 16)) : "", "n"),
+        td(before === undefined ? "" : moved ? chip(false, "Changed from " + before.replace(/(..)/g, "$1 ").trim()) : "Same"),
+        td(el("button", {
+          class: "quiet slim",
+          onclick: () => {
+            $("maker-id").value = item.id;
+            $("maker-size").value = String(Math.min(4, item.data.length / 2));
+          },
+        }, "Use")));
+    })) : el("p", { class: "secondary small" }, "Nothing answered in that run."));
+}
+
+async function runScan() {
+  if (scanning) {
+    scanning = false;  // the button reads Stop while a scan runs
+    return;
+  }
+  const module = $("maker-module").value;
+  const total = Number($("scan-count").value) || 64;
+  const epoch = reportEpoch;
+  const found = [];
+  let next = ($("scan-first").value.trim() || "1E00").toUpperCase();
+  let asked = 0;
+  let failure = "";
+  scanning = true;
+  $("scan-start").textContent = "Stop";
+  while (scanning && next !== null && asked < total) {
+    $("scan-note").textContent = "Asking from " + next + ": " + asked + " of " + total + " so far";
+    const count = Math.min(64, total - asked);
+    const result = await api("/api/maker/scan", { module, first: next, count });
+    if (epoch !== reportEpoch) return;  // the car changed underneath the scan
+    if (result.error) {
+      failure = capital(result.error) + ".";
+      break;
+    }
+    found.push(...result.found);
+    asked += count;
+    next = result.next;
+    drawScan(module, found);
+  }
+  scanning = false;
+  $("scan-start").textContent = "Scan";
+  $("scan-note").textContent = failure || (found.length + " of " + asked + " identifiers answered");
+  for (const item of found) lastScan.set(module + ":" + item.id, item.data);
+}
+
+/* ---- settings: polling ----------------------------------------------------------------- */
+
+const INTERVALS = [["0", "As fast as the car answers"], ["0.1", "Up to 10 a second"], ["0.25", "Up to 4 a second"],
+  ["0.5", "Up to 2 a second"], ["1", "Once a second"], ["2", "Every 2 seconds"], ["5", "Every 5 seconds"]];
+let shownInterval = null;
+
+function showInterval(status) {
+  if (status.interval !== shownInterval) {
+    shownInterval = status.interval;
+    const value = String(status.interval);
+    const known = INTERVALS.some((option) => option[0] === value);
+    $("interval").replaceChildren(...(known ? INTERVALS : INTERVALS.concat([[value, "Every " + value + " seconds"]]))
+      .map((option) => el("option", { value: option[0] }, option[1])));
+    $("interval").value = value;
+  }
+  $("interval-state").textContent = status.state === "connected" && status.rate
+    ? "Reading " + status.values + " values " + fmt(status.rate) + " times a second" : "";
+}
+
+async function changeInterval() {
+  const result = await api("/api/interval", { seconds: Number($("interval").value) });
+  $("interval-note").textContent = result.error ? capital(result.error) + "." : "";
+  if (result.error) {
+    shownInterval = null;  // put the list back to what the app is really doing
+    if (current) showInterval(current);
+  } else showStatus(result);
+}
+
 /* ---- settings: central server ------------------------------------------------------ */
 
 function showCentral(state) {
@@ -1710,6 +1916,7 @@ function loadCarTab() {
   if (activeTab === "diagnosis" || activeTab === "drive") loadReportSources().then(loadReport);
   if (activeTab === "setup") {
     loadSetup();
+    loadMaker();
     loadReportSources();
   }
 }
@@ -1742,6 +1949,9 @@ $("wifi-forget").addEventListener("click", () => changeNetwork({ action: "forget
 $("uplink-save").addEventListener("click", saveUplink);
 $("uplink-join").addEventListener("click", joinUplink);
 $("uplink-forget").addEventListener("click", () => changeNetwork({ action: "forget", which: "uplink" }));
+$("interval").addEventListener("change", changeInterval);
+$("maker-add").addEventListener("click", addMaker);
+$("scan-start").addEventListener("click", runScan);
 $("central-save").addEventListener("click", saveCentral);
 $("central-send").addEventListener("click", sendCentral);
 $("report-refresh").addEventListener("click", loadReport);

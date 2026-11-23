@@ -18,6 +18,7 @@ from . import __version__
 from .elm import AdapterError, AdapterInfo, Elm327, NoVehicle
 from .network import Wifi
 from .frames import FrameError
+from .garage import saved_interval
 from .obd import DTC_SERVICES, Obd, Reading, ecu_label
 from .service import DEFAULT_LIVE_PIDS, Hub
 from .sim import VEHICLES, PtyAdapter, SimElm, SimTransport
@@ -323,7 +324,12 @@ def cmd_serve(args: argparse.Namespace) -> int:
     vehicles = {name: make() for name, make in VEHICLES.items()}
     simulators = {name: (lambda v=vehicle: SimTransport(SimElm(v))) for name, vehicle in vehicles.items()}
 
-    hub = Hub(open_transport, db_path=args.db, interval=args.interval, simulators=simulators, simulation=args.sim)
+    # The rate chosen on the page is kept; one given on the command line wins over it.
+    interval = args.interval if args.interval is not None else saved_interval(args.db)
+    hub = Hub(
+        open_transport, db_path=args.db, interval=0.25 if interval is None else interval,
+        simulators=simulators, simulation=args.sim,
+    )
     wifi = Wifi() if args.manage_wifi else None
     updater = Updater(args.update_dir) if args.update_dir else None
     uploader = Uploader(args.db)
@@ -418,7 +424,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve = add("serve", cmd_serve, "run the web interface for a browser, phone or tablet")
     serve.add_argument("--host", default="127.0.0.1", help="address to listen on (default 127.0.0.1; use 0.0.0.0 for other devices)")
     serve.add_argument("--web-port", type=int, default=8000, help="port for the web interface (default 8000)")
-    serve.add_argument("--interval", type=float, default=0.25, help="minimum seconds between updates (default 0.25)")
+    serve.add_argument("--interval", type=float, help="minimum seconds between updates (default: what was last chosen on the page, else 0.25)")
     serve.add_argument("--manage-wifi", action="store_true", help="let the page switch this machine between its hotspot and a Wi-Fi network (for the box in the car; needs NetworkManager)")
     serve.add_argument("--update-dir", metavar="DIR", help="let the page install new releases into DIR, where this copy was installed (for the box in the car)")
 

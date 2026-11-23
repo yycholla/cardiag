@@ -134,6 +134,11 @@ class Elm327:
             return BusProtocol(number, PROTOCOL_NAMES[number])
         raise AdapterError(f"the adapter reported an unknown protocol {number!r}")
 
+    def set_header(self, header: str) -> None:
+        """Address the requests that follow to one module, or to all of them (7DF on 11-bit CAN)."""
+        if "OK" not in self.command(f"ATSH{header}"):
+            raise AdapterError(f"the adapter refused to address module {header}")
+
     def request(self, payload_hex: str, *, timeout: float | None = None) -> list[str]:
         """Send a diagnostic request and return the raw data lines from the vehicle."""
         data: list[str] = []

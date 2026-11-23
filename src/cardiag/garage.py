@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import time
 
-from . import analysis
+from . import analysis, maker
 from .pids import PIDS
 from .service import Hub
 from .store import Store
@@ -147,6 +147,77 @@ def take_baseline(hub: Hub, db_path: str | None, known_good: object) -> dict:
         return store.save_profile(vin, {"baseline": baseline})
     finally:
         store.close()
+
+
+def maker_report(hub: Hub) -> dict:
+    """The maker-specific values set up for the connected car, and what could be added."""
+    found = hub.modules()
+    values = [value.as_json() for value in hub.maker()]
+    have = {value["key"] for value in values}
+    answering = {module["reply"] for module in found["modules"]}
+    return {
+        **found,
+        "values": values,
+        "candidates": [
+            candidate for candidate in maker.CANDIDATES
+            if candidate["module"] in answering and f"22:{candidate['module']}:{candidate['id']}" not in have
+        ],
+        "limit": maker.MAX_VALUES,
+    }
+
+
+def save_maker(hub: Hub, db_path: str | None, body: dict) -> dict:
+    values = maker.parse(body.get("values"))
+    vin = _vin(hub)
+    if values and not hub.modules()["supported"]:
+        raise ValueError("maker-specific values can only be read on an 11-bit CAN network so far")
+    store = Store(db_path)
+    try:
+        store.save_profile(vin, {"maker": [value.as_json() for value in values]})
+    finally:
+        store.close()
+    hub.set_maker(values)
+    return maker_report(hub)
+
+
+def scan(hub: Hub, body: dict) -> dict:
+    """Ask one module which of a run of identifiers it has. At most 64 at a time, so the page can show progress."""
+    module = maker.module_address(body.get("module"))
+    first = maker.hex_number(body.get("first"), 4, "the first identifier")
+    count = body.get("count", 64)
+    if isinstance(count, bool) or not isinstance(count, int) or not 1 <= count <= 64:
+        raise ValueError("count must be between 1 and 64")
+    count = min(count, 0x10000 - first)
+    found = hub.scan(module, first, count)
+    return {
+        "found": [{"id": f"{identifier:04X}", "data": data.hex().upper()} for identifier, data in found],
+        "next": f"{first + count:04X}" if first + count < 0x10000 else None,
+    }
+
+
+def set_interval(hub: Hub, db_path: str | None, seconds: object) -> dict:
+    if isinstance(seconds, bool) or not isinstance(seconds, (int, float)) or not 0 <= seconds <= 10:
+        raise ValueError("the time between updates must be between 0 and 10 seconds")
+    store = Store(db_path)
+    try:
+        store.set_setting("interval", repr(float(seconds)))
+    finally:
+        store.close()
+    hub.set_interval(float(seconds))
+    return hub.status()
+
+
+def saved_interval(db_path: str | None) -> float | None:
+    """The time between updates chosen on the page, if one was."""
+    store = Store(db_path)
+    try:
+        text = store.setting("interval")
+    finally:
+        store.close()
+    try:
+        return float(text) if text is not None else None
+    except ValueError:
+        return None
 
 
 def _passes(hub: Hub, store: Store, source: object) -> tuple[list, dict]:

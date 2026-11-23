@@ -319,6 +319,25 @@ async function scenario() {
   check(text($("wifi-state")).includes("On the travelling hotspot iPad, address 172.20.10.4"), "joined to it: " + text($("wifi-state")));
   check($("wifi-hotspot").hidden === false && $("uplink-join").hidden === true, "now offers the way back to the own hotspot");
 
+  // Settings: the polling rate.
+  feed(Object.assign({}, live[0], { status: Object.assign({}, live[0].status, { rate: 3.8, values: 12 }) }));
+  check(text($("interval-state")) === "Reading 12 values 3.80 times a second", "says what is being achieved: " + text($("interval-state")));
+  check($("interval").value === String(live[0].status.interval) && $("interval").children.length === 8, "lists the rates, with the one in use even when it is unusual");
+  const intervalRequests = [];
+  routes["/api/interval"] = (options) => {
+    intervalRequests.push(JSON.parse(options.body));
+    return intervalRequests.length === 1 ? { error: "the time between updates must be between 0 and 10 seconds" }
+      : Object.assign({}, live[0].status, { interval: 1 });
+  };
+  $("interval").value = "0.5";
+  await $("interval").fire("change");
+  check(text($("interval-note")).startsWith("The time between updates must be"), "explains a refused rate");
+  check($("interval").value === String(live[0].status.interval), "and shows what the app is still doing");
+  $("interval").value = "1";
+  await $("interval").fire("change");
+  check(intervalRequests[1].seconds === 1 && $("interval").value === "1" && $("interval").children.length === 7, "a chosen rate is sent and shown");
+  check(text($("interval-note")) === "", "with nothing to complain about");
+
   // Diagnosis, from the server's analysis of the live car.
   const sane = (node, what) => {
     const words = text(node);
@@ -350,6 +369,7 @@ async function scenario() {
   $("report-against").value = String(DATA.drive_id);
   await $("report-source").fire("change");
   const drive = text($("drive"));
+  check(!drive.includes("From the modules themselves"), "no maker-specific card when none are set up");
   for (const expected of ["Gear map", "the 6 gears learned", "Gear over time", "Shifts", "2 to 3", "Flare", "Slip by gear",
     "Slip under load in gear 3", "odd-gear clutch", "Pulling power", "Pedal", "No slower", "What this cannot see"]) {
     check(drive.includes(expected), "drive shows " + expected);
@@ -434,6 +454,63 @@ async function scenario() {
   routes["/api/setup/gears"] = { error: "no steady gears found there yet; drive gently and hold each gear for a few seconds" };
   await $("gears-learn").fire("click");
   check(text($("gears-note")).startsWith("No steady gears found"), "explains when a drive has no gears in it");
+  // Setup: values only this maker has.
+  routes["/api/maker"] = DATA.maker;
+  await loadMaker();
+  check($("maker-steps").hidden === false && $("maker-empty").hidden === true, "offers maker-specific values on a CAN car");
+  check($("maker-module").value === "7E9", "starts on the transmission module");
+  check(text($("maker-values")).startsWith("None set up yet"), "nothing set up to begin with");
+  const tries = $("maker-candidates").children.filter((node) => node.tag === "button");
+  check(tries.length === 2 && text(tries[0]) === "Try Clutch A slip (1EBB)", "offers the leads: " + text($("maker-candidates")));
+  check(text($("maker-candidates")).includes("not from the maker"), "and says where they came from");
+  const makerRequests = [];
+  const slipA = Object.assign({ key: "22:7E9:1EBB" }, DATA.maker.candidates[0]);
+  routes["/api/maker/values"] = (options) => {
+    const values = JSON.parse(options.body).values;
+    makerRequests.push(values);
+    if (values.some((value) => value.scale === null)) return { error: "the scale must be a number" };
+    return Object.assign({}, DATA.maker, { values: values.map((value) => Object.assign({ key: "22:" + value.module + ":" + value.id }, value)), candidates: DATA.maker.candidates.slice(1) });
+  };
+  await tries[0].fire("click");
+  check(makerRequests[0].length === 1 && makerRequests[0][0].id === "1EBB", "adding a lead sends it");
+  check(text($("maker-values")).includes("Clutch A slip") && text($("maker-values")).includes("2 bytes, can be negative, times 0.25"), "and lists it with its rule: " + text($("maker-values")));
+  $("maker-id").value = "1e12";
+  $("maker-name").value = "Gear";
+  $("maker-scale").value = "lots";
+  await $("maker-add").fire("click");
+  check(text($("maker-note")) === "The scale must be a number." && $("maker-name").value === "Gear", "a bad rule is explained and left to correct");
+  $("maker-scale").value = "";
+  await $("maker-add").fire("click");
+  const sentGear = makerRequests[makerRequests.length - 1][1];
+  check(sentGear.id === "1E12" && sentGear.module === "7E9" && sentGear.scale === 1 && sentGear.offset === 0 && sentGear.size === 1, "an added value is sent with plain defaults: " + JSON.stringify(sentGear));
+  check($("maker-name").value === "" && text($("maker-values")).includes("Gear"), "and the form is cleared");
+  const removers = $("maker-values").descendants().filter((node) => node.tag === "button");
+  await removers[0].fire("click");
+  check(makerRequests[makerRequests.length - 1].length === 1 && !text($("maker-values")).includes("Clutch A slip"), "a value can be removed");
+
+  const scanRequests = [];
+  let gearByte = "03";
+  routes["/api/maker/scan"] = (options) => {
+    const request = JSON.parse(options.body);
+    scanRequests.push(request);
+    if (request.first === "1E00") return { found: [{ id: "1E12", data: gearByte }], next: "1E40" };
+    if (request.first === "1E40") return { found: [], next: "1E80" };
+    return { error: "the car took too long to answer" };
+  };
+  $("scan-count").value = "256";
+  await $("scan-start").fire("click");
+  check(scanRequests.length === 3 && scanRequests[1].first === "1E40" && scanRequests[0].count === 64 && scanRequests[0].module === "7E9", "scans in runs of 64, each from where the last ended");
+  check(text($("scan-note")) === "The car took too long to answer." && text($("scan-start")) === "Scan", "stops and says why when a run fails");
+  check(text($("scan-results")).includes("1E12") && text($("scan-results")).includes("03"), "and keeps what it found: " + text($("scan-results")));
+  gearByte = "04";
+  $("scan-count").value = "64";
+  await $("scan-start").fire("click");
+  check(text($("scan-note")) === "1 of 64 identifiers answered", "says how many answered: " + text($("scan-note")));
+  check(text($("scan-results")).includes("Changed from 03"), "and what moved since the last scan: " + text($("scan-results")));
+  await $("scan-results").descendants().find((node) => node.tag === "button").fire("click");
+  check($("maker-id").value === "1E12" && $("maker-size").value === "1", "a found identifier can be taken into the form");
+  showMaker(Object.assign({}, DATA.maker, { supported: false, modules: [], candidates: [] }));
+  check($("maker-steps").hidden === true && $("maker-empty").hidden === false, "says so where the network is not one it can read these on");
   sane($("setup-steps"), "setup");
   await $("tab-live").fire("click");
   check($("report-bar").hidden === true, "the report bar goes away with its tabs");

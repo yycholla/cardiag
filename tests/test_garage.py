@@ -35,7 +35,7 @@ def test_setup_says_what_the_car_offers_and_what_the_views_want(served):
     assert wanted["Engine speed and vehicle speed"]["offered"] and wanted["Fuel rail pressure"]["offered"]
     assert not wanted["Accelerator pedal position"]["offered"] and "throttle position" in wanted["Accelerator pedal position"]["without"]
     assert report["drive_pids"] == ["0C", "0D", "11", "04", "0E"]
-    assert report["profile"] == {"engine_litres": None, "transmission": None, "fuel": "petrol", "gears": [], "baseline": None}
+    assert report["profile"] == {"engine_litres": None, "transmission": None, "fuel": "petrol", "gears": [], "baseline": None, "maker": []}
 
 
 def test_profile_is_kept_per_car_and_checked(served):
