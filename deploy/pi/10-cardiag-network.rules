@@ -1,5 +1,9 @@
 // The cardiag service runs without a login session, so NetworkManager would
 // otherwise refuse to let it switch the box between its hotspot and Wi-Fi.
+//
+// The number in this file's name matters: rules are tried in name order, and
+// Raspberry Pi OS has an older-style rule (49-polkit-pkla-compat) that refuses
+// network changes from outside a login session before a later rule is asked.
 polkit.addRule(function(action, subject) {
     if (action.id.indexOf("org.freedesktop.NetworkManager.") == 0 && subject.user == "@USER@") {
         return polkit.Result.YES;

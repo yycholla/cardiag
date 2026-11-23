@@ -57,8 +57,10 @@ chown -R "$owner" "$home"
 install -D -m 0755 "$here/cardiag" "$root/usr/local/bin/cardiag"
 install -d "$root/etc/systemd/system" "$root/etc/polkit-1/rules.d"
 sed "s/@USER@/$user/" "$here/cardiag.service" > "$root/etc/systemd/system/cardiag.service"
-sed "s/@USER@/$user/" "$here/50-cardiag-network.rules" > "$root/etc/polkit-1/rules.d/50-cardiag-network.rules"
-chmod 0644 "$root/etc/systemd/system/cardiag.service" "$root/etc/polkit-1/rules.d/50-cardiag-network.rules"
+rules=$root/etc/polkit-1/rules.d
+rm -f "$rules/50-cardiag-network.rules"  # an earlier name, which sorted too late to be asked
+sed "s/@USER@/$user/" "$here/10-cardiag-network.rules" > "$rules/10-cardiag-network.rules"
+chmod 0644 "$root/etc/systemd/system/cardiag.service" "$rules/10-cardiag-network.rules"
 
 if [ -z "$root" ]; then
     if [ ! -d "$home/vendor/serial" ] && ! python3 -c 'import serial' 2>/dev/null; then
