@@ -374,6 +374,12 @@ def _assign(values: dict[str, float], ratios: list[float]) -> tuple[int | None, 
     return gear, slip
 
 
+def gear_now(values: dict[str, float], ratios: list[float]) -> tuple[int | None, float | None]:
+    """The gear one pass is in, counted from 1, and the percent it sits above that gear's line."""
+    gear, slip = _assign(values, ratios)
+    return (None, None) if gear is None else (gear + 1, _round(slip, 1))
+
+
 def drive_report(passes: list[Pass], gears: list[dict]) -> dict:
     """Gear by gear: where the engine sat against each gear line, every shift, and slip under load."""
     if not (_has(passes, RPM) and _has(passes, SPEED)):

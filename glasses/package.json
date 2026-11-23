@@ -1,0 +1,23 @@
+{
+  "name": "cardiag-glasses",
+  "private": true,
+  "version": "0.6.0",
+  "type": "module",
+  "description": "cardiag's live values on Even G2 glasses, as an Even Hub app",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "node --test test/view.test.ts",
+    "sim": "evenhub-simulator http://127.0.0.1:8000/glasses/",
+    "pack": "node scripts/pack.mjs"
+  },
+  "dependencies": {
+    "@evenrealities/even_hub_sdk": "0.0.16"
+  },
+  "devDependencies": {
+    "@evenrealities/evenhub-cli": "0.2.0",
+    "@evenrealities/evenhub-simulator": "0.9.5",
+    "typescript": "5.9.3",
+    "vite": "7.3.1"
+  }
+}

@@ -153,6 +153,32 @@ while one is showing.
 
 There is no login. Use `--host 0.0.0.0` only on a network you trust.
 
+### On Even G2 glasses
+
+cardiag carries an [Even Hub](https://hub.evenrealities.com) app that puts six
+values at a time on Even G2 glasses: speed, engine speed, gear, clutch slip,
+load and pedal on the first page, engine values on the second, any
+maker-specific values on a third, and a page of your own choosing.
+
+The app runs inside the Even Realities phone app, which asks cardiag for the
+latest values twice a second and sends the text to the glasses. So the phone
+has to be able to reach the box in the car: on the box's hotspot, with the box
+on the phone's hotspot, or over Tailscale. The central server has no live
+values to show.
+
+The quickest way to try it needs no build. With Developer Mode on in the phone
+app, make a QR code for the page the box serves and scan it:
+
+```sh
+npx @evenrealities/evenhub-cli qr --url "http://<the box's address>:8000/glasses/"
+```
+
+Opened in an ordinary browser, the same address shows a preview and the
+settings. To install the app for good, see [glasses/README.md](glasses/README.md).
+
+A press or a swipe down turns to the next page, a swipe up goes back, and a
+double press leaves. Gear and slip need the gears learned in Setup first.
+
 ## Raspberry Pi in the car
 
 A Pi with the adapter in a USB port can replace the laptop: it runs the server,
@@ -265,6 +291,9 @@ geared Focus, whose faults are known. Nothing here has been run against a real
 adapter or vehicle yet, and Wi-Fi switching, the travelling hotspot, uploads
 and updates have not been run on a Pi yet.
 
+The glasses app has its own tests (`npm test` in `glasses/`), and was run in
+Even's simulator, not on glasses.
+
 One test runs the web page's script outside a browser. It needs Node.js or
 QuickJS (`qjs`) and is skipped without one. It checks behaviour, not layout.
 
@@ -286,6 +315,7 @@ QuickJS (`qjs`) and is skipped without one. It checks behaviour, not layout.
 | `src/cardiag/service.py` | Background worker that owns the adapter and retries the connection |
 | `src/cardiag/web.py` | Web server: JSON endpoints and a live event stream |
 | `src/cardiag/web/index.html` | The web page |
+| `src/cardiag/web/glasses/` | The glasses app as built; its source is in `glasses/` |
 | `src/cardiag/network.py` | The Pi's hotspot, home Wi-Fi and travelling hotspot, through NetworkManager |
 | `src/cardiag/update.py` | Finding and installing releases from GitHub |
 | `src/cardiag/sim.py` | Simulated adapter and vehicles |

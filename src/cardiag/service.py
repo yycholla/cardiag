@@ -132,6 +132,7 @@ class Hub:
         self._watch: list[int] | None = None  # None means the default set
         self._readings: list[Reading] = []
         self._elapsed = 0.0
+        self._pass_at: float | None = None  # when the latest pass ended, on this machine's steady clock
         self._recording: dict | None = None
         self._recording_started = 0.0
         self._discovery: dict | None = None  # progress of a discovery run, for the page
@@ -180,6 +181,21 @@ class Hub:
                     for pid in self._available
                 ],
                 "watched": [f"{pid:02X}" for pid in self._watched()],
+            }
+
+    def glance(self) -> dict:
+        """The latest pass, cut down to what a small display needs."""
+        with self._changed:
+            status = self._status()
+            return {
+                "state": status["state"],
+                "message": status["message"],
+                "vin": status["vin"],
+                "recording": status["recording"]["seconds"] if status["recording"] else None,
+                "discovery": status["discovery"]["phase"] if status["discovery"] else None,
+                "rate": status["rate"],
+                "age": round(time.monotonic() - self._pass_at, 2) if self._pass_at is not None else None,
+                "readings": [reading_json(reading) for reading in self._readings],
             }
 
     def offered(self) -> list[dict]:
@@ -349,6 +365,7 @@ class Hub:
             self._adapter = None  # with no vehicle, the adapter itself was still found
         self._network = self._vin = None
         self._modules, self._available, self._readings = [], [], []
+        self._pass_at = None
         self._offered, self._ecus, self._maker_ok, self._maker = [], [], False, []
         self._history.clear()
         self._version += 1
@@ -485,6 +502,7 @@ class Hub:
                     return
                 self._readings = [reading for _, reading in samples]
                 self._elapsed = pass_started - started
+                self._pass_at = time.monotonic()
                 self._history.append(
                     (self._elapsed, {r.key: r.value for _, r in samples if not isinstance(r.value, str)})
                 )

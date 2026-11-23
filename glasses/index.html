@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cardiag glasses</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f6f9; --panel: #ffffff; --ink: #16202e; --soft: #5a6778; --line: #d5dbe4; --accent: #1f5fd0;
+    --good: #1a7f4b; --bad: #b3261e; --glass: #06120a; --lit: #3dff7a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f141b; --panel: #171e28; --ink: #e6ebf2; --soft: #94a1b3; --line: #2a3442; --accent: #7aa7ff; --good: #5fd08f; --bad: #ff8a80; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px max(16px, env(safe-area-inset-right)) 32px max(16px, env(safe-area-inset-left));
+    background: var(--bg); color: var(--ink); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 620px; margin: 0 auto; display: grid; gap: 16px; }
+  h1 { font-size: 20px; margin: 0; }
+  h2 { font-size: 15px; margin: 0 0 10px; }
+  p { margin: 0; color: var(--soft); font-size: 14px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  #stage { position: relative; overflow: hidden; border-radius: 8px; background: var(--glass); }
+  #lens { position: absolute; left: 0; top: 0; width: 576px; height: 288px; transform-origin: 0 0; color: var(--lit);
+    font: 21px/27px system-ui, sans-serif; }
+  #lens div { position: absolute; white-space: pre-wrap; overflow: hidden; }
+  #lens .head { padding: 6px; }
+  #lens .cell { padding: 10px; border: 1px solid #1f8f47; border-radius: 6px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 12px; }
+  .row p { flex: 1 1 200px; }
+  .good { color: var(--good); } .bad { color: var(--bad); }
+  label { display: grid; gap: 4px; font-size: 14px; color: var(--soft); margin-top: 12px; }
+  input, select, button { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 12px; min-height: 44px; width: 100%; }
+  button { width: auto; cursor: pointer; }
+  input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0 12px; }
+  #mine { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 12px; }
+  ul { margin: 0; padding-left: 20px; color: var(--soft); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>cardiag on your glasses</h1>
+
+  <section>
+    <div id="stage"><div id="lens"></div></div>
+    <div class="row">
+      <button id="back" type="button">Previous page</button>
+      <button id="next" type="button">Next page</button>
+      <p><span id="link"></span><br><span id="worn"></span></p>
+    </div>
+  </section>
+
+  <section>
+    <h2>On the glasses</h2>
+    <ul>
+      <li>Press, or swipe down: next page</li>
+      <li>Swipe up: previous page</li>
+      <li>Double press: leave</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Where the values come from</h2>
+    <p>The box in the car has the live values. Leave this empty when the box itself served this page.</p>
+    <label>Address of cardiag
+      <input id="server" type="url" inputmode="url" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="http://cardiag:8000">
+    </label>
+    <div class="pair">
+      <label>Refresh
+        <select id="every">
+          <option value="250">Four times a second</option>
+          <option value="500">Twice a second</option>
+          <option value="1000">Every second</option>
+          <option value="2000">Every two seconds</option>
+        </select>
+      </label>
+      <label>Speed
+        <select id="speed"><option value="km/h">km/h</option><option value="mph">mph</option></select>
+      </label>
+      <label>Temperature
+        <select id="temp"><option value="C">Celsius</option><option value="F">Fahrenheit</option></select>
+      </label>
+    </div>
+  </section>
+
+  <section>
+    <h2>A page of your own</h2>
+    <p>Pick up to six values. The page appears after the others once one is chosen.</p>
+    <div id="mine"></div>
+  </section>
+</main>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
