@@ -35,7 +35,8 @@ function save(): void {
 }
 
 const settings = load()
-let packed = '' // the address a packaged build was made for (see scripts/pack.mjs)
+let packed: string[] = [] // the addresses a packaged build was made for (see scripts/pack.mjs)
+let using = 0 // which of them is being asked
 let glance: Glance | null = null
 let problem: string | null = null
 let misses = 0
@@ -50,9 +51,9 @@ function tidy(address: string): string {
   return text && !/^https?:\/\//i.test(text) ? `http://${text}` : text
 }
 
-/** The address to ask: the one typed in, else the one packed in, else wherever this page came from. */
+/** The address to ask: the one typed in, else one packed in, else wherever this page came from. */
 function source(): string | null {
-  const base = tidy(settings.server) || packed
+  const base = tidy(settings.server) || packed[using % (packed.length || 1)]
   if (base) return `${base}/api/glance`
   return location.protocol.startsWith('http') ? new URL('../api/glance', location.href).href : null
 }
@@ -81,7 +82,8 @@ async function tick(): Promise<void> {
       misses = 0
     } catch {
       misses += 1
-      if (misses >= 2) {
+      using += 1 // a packaged build may know the box by more than one address; try the next
+      if (misses >= Math.max(2, packed.length)) {
         glance = null
         problem = 'no answer from the box'
       }
@@ -279,7 +281,7 @@ async function start(): Promise<void> {
   draw()
   try {
     const reply = await fetch('./config.json', { cache: 'no-store' })
-    if (reply.ok) packed = tidy(String((await reply.json()).server ?? ''))
+    if (reply.ok) packed = ((await reply.json()).servers ?? []).map((address: unknown) => tidy(String(address))).filter(Boolean)
   } catch {
     // Only a packaged build names an address there.
   }

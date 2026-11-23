@@ -74,7 +74,7 @@ def test_with_no_car_there_is_still_an_answer(served):
 def test_the_app_is_built_into_the_package():
     page = (BUILT / "index.html").read_text()
     assert "./assets/app.js" in page and (BUILT / "assets" / "app.js").stat().st_size > 10_000
-    assert (BUILT / "config.json").read_text().strip() == '{"server": ""}'  # only a packaged build names an address
+    assert (BUILT / "config.json").read_text().strip() == '{"servers": []}'  # only a packaged build names an address
 
 
 def test_the_app_is_served_beside_the_page(served):

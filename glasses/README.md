@@ -44,7 +44,8 @@ to bring it back.
 ## Installed, as a private or beta build
 
 An installed app may only reach the addresses its manifest lists, and the list
-takes whole addresses, no wildcards. So a build is made for one cardiag:
+takes whole addresses, no wildcards. So a build is made for one cardiag, by
+one or more of its addresses:
 
 ```sh
 npm run pack -- https://carbox.your-tailnet.ts.net
@@ -53,11 +54,12 @@ npx evenhub upload cardiag.ehpk -m "what changed"    # after that
 npx evenhub promote <version>          # to start it from the glasses menu
 ```
 
-The address is written into the manifest and into a `config.json` beside the
-page, so nothing is typed on the phone. A second argument sets the package id,
-which has to be one nobody else has taken.
+The addresses are written into the manifest and into a `config.json` beside
+the page, so nothing is typed on the phone; the app asks each in turn until one
+answers. `--id com.yourname.cardiag` sets the package id, which has to be one
+nobody else has taken.
 
-Use an `https` address. Even's documentation says plain `http` is only for
+Put an `https` address first. Even's documentation says plain `http` is only for
 development, and the phone may refuse it from an installed app. On a tailnet,
 `tailscale serve --bg 8000` on the box gives it one.
 
