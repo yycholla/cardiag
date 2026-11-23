@@ -164,6 +164,7 @@ async function scenario() {
   check(simRequests[0].vehicle === "tahoe", "asks for the Tahoe");
   check(DATA.simulating.state === "starting" && text($("link-text")) === "Starting", "shows the switch under way");
   check($("tiles").children.length === 0, "the real car's values are cleared at once");
+  check(text($("codes")) === "" && text($("monitors")) === "", "and so are its codes and readiness");
   feed(DATA.tahoe);
   await settle();
   check(text($("link-text")) === "Simulation", "the header says it is a simulation, got " + text($("link-text")));
@@ -174,8 +175,26 @@ async function scenario() {
   await $("sources").children[0].fire("click");
   check(simRequests[1].vehicle === null, "asks for the real car");
   check(text($("source-state")).includes("no such car"), "shows why a switch failed");
+  // Codes and readiness asked of the simulated car, with the answers arriving after the switch back.
+  routes["/api/codes"] = () => {
+    feed(live[0]);
+    return DATA.codes;
+  };
+  await $("read-codes").fire("click");
+  check(text($("codes")) === "", "a late answer about the simulated car is not shown for the real one: " + text($("codes")));
+  routes["/api/codes"] = DATA.codes;
+  routes["/api/monitors"] = () => {
+    feed(DATA.tahoe);
+    return DATA.monitors;
+  };
+  await $("read-monitors").fire("click");
+  check(text($("monitors")) === "", "nor a late readiness answer: " + text($("monitors")));
+  routes["/api/monitors"] = DATA.monitors;
+  await $("read-codes").fire("click");
+  check(text($("codes")).includes("P0171"), "codes read after the switch are shown");
   feed(live[0]);
   await settle();
+  check(text($("codes")) === "", "and cleared again when the car changes");
   check(text($("link-text")) === "Connected" && sourceLabels().startsWith("Simulate a Ford Focus"), "back on the real car");
   check(tiles.has("01:0C") && tiles.get("01:0C").history.length === 1, "trend lines start again after a switch");
 

@@ -111,9 +111,16 @@ class Updater:
             self._lock.release()
 
     def confirm(self) -> None:
-        """The running version started properly; an update no longer needs undoing."""
-        for name in ("pending", "pending.tried"):
-            (self.home / name).unlink(missing_ok=True)
+        """The running version started properly; an update to it no longer needs undoing.
+
+        Only an update to the version that is running counts. One installed a moment ago
+        by this same process is for a version that has yet to start, and stays unproven.
+        """
+        with self._lock:  # an install in progress finishes writing its mark first
+            if self._note("pending") != self.current:
+                return
+            for name in ("pending", "pending.tried"):
+                (self.home / name).unlink(missing_ok=True)
 
     # ---- steps ---------------------------------------------------------------
 

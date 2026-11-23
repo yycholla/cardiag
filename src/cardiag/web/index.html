@@ -340,7 +340,10 @@ function showStatus(status) {
 
   const source = status.simulation || "";
   if (status.state !== lastState || source !== lastSource) {
-    if (source !== lastSource) clearTiles();  // values from one car must not run on into another
+    if (source !== lastSource) {
+      clearTiles();    // nothing from one car may be left on show as if it came from another
+      clearReports();
+    }
     lastState = status.state;
     lastSource = source;
     if (status.state === "connected") loadChoices();
@@ -352,7 +355,6 @@ function showStatus(status) {
 function showOffline() {
   current = null;
   lastState = null;
-  lastSource = null;
   showLink("critical", GLYPH.critical, "App not reachable", "Trying again…");
   $("record").disabled = true;
   clearTiles();
@@ -516,6 +518,14 @@ async function saveChoices() {
 
 /* ---- codes ------------------------------------------------------------- */
 
+let reportEpoch = 0;  // goes up when the car changes, so answers about the last one are dropped
+
+function clearReports() {
+  reportEpoch++;
+  $("codes").replaceChildren();
+  $("monitors").replaceChildren();
+}
+
 function codeList(codes) {
   if (codes === null || codes === undefined) return el("span", { class: "secondary" }, "Not reported by this module");
   if (!codes.length) return el("span", { class: "secondary" }, "None");
@@ -525,7 +535,9 @@ function codeList(codes) {
 async function readCodes() {
   const box = $("codes");
   box.replaceChildren(el("p", { class: "secondary" }, "Reading codes…"));
+  const epoch = reportEpoch;
   const report = await api("/api/codes");
+  if (epoch !== reportEpoch) return;
   if (report.error) {
     box.replaceChildren(problem(report.error));
     return;
@@ -563,7 +575,9 @@ async function readCodes() {
 async function readMonitors() {
   const box = $("monitors");
   box.replaceChildren(el("p", { class: "secondary" }, "Checking readiness…"));
+  const epoch = reportEpoch;
   const report = await api("/api/monitors");
+  if (epoch !== reportEpoch) return;
   if (report.error) {
     box.replaceChildren(problem(report.error));
     return;

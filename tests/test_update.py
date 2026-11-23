@@ -109,7 +109,9 @@ def test_install_switches_to_the_new_release_and_keeps_the_old_one(github, home)
     assert (home / "pending").read_text() == "9.0.0\n"
     assert installed_versions(home) == sorted([cardiag.__version__, "9.0.0"])
 
-    updater.confirm()
+    updater.confirm()  # still the old version running: the new one has proved nothing yet
+    assert (home / "pending").read_text() == "9.0.0\n"
+    Updater(home, api=github.url, current="9.0.0").confirm()  # the new version, after its restart
     assert not (home / "pending").exists()
 
     # The next update drops the oldest copy and keeps one to go back to.
@@ -219,12 +221,24 @@ def test_an_update_that_never_confirms_is_undone_on_the_second_start(github, hom
 
 
 @needs_system_python
+def test_the_old_version_confirming_late_does_not_spoil_the_undo(github, home):
+    github.publish("9.0.0")
+    updater = Updater(home, api=github.url)
+    updater.install()
+    updater.confirm()  # the old version's start-up timer firing just after the install
+    assert launch(home, service=True).stdout == "cardiag 9.0.0\n"
+    assert launch(home, service=True).stdout == f"cardiag {cardiag.__version__}\n"  # still undone
+    assert updater.status()["rolled_back"] == "9.0.0"
+
+
+@needs_system_python
 def test_a_confirmed_update_stays(github, home):
     github.publish("9.0.0")
     updater = Updater(home, api=github.url)
     updater.install()
     assert launch(home, service=True).stdout == "cardiag 9.0.0\n"
-    updater.confirm()
+    Updater(home, api=github.url, current="9.0.0").confirm()
+    assert not (home / "pending.tried").exists()
     assert launch(home, service=True).stdout == "cardiag 9.0.0\n"
     assert launch(home, service=True).stdout == "cardiag 9.0.0\n"
     assert updater.status()["rolled_back"] is None
