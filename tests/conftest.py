@@ -13,6 +13,7 @@ import cardiag
 from cardiag.network import Wifi
 from cardiag.service import Hub
 from cardiag.sim import VEHICLES, SimElm, SimTransport, make_focus
+from cardiag.sync import Uploader
 from cardiag.update import Updater
 from cardiag.web import make_server
 
@@ -73,9 +74,12 @@ def _serve(tmp_path, **parts):
         retry_delay=0.05,
         simulators=_simulators(),
     )
+    parts.setdefault("uploader", Uploader(db_path, name="testbox", retry=0.05))
     server = make_server(hub, "127.0.0.1", 0, db_path, **parts)
+    hub.on_recorded = parts["uploader"].wake
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     hub.start()
+    parts["uploader"].start()
     thread.start()
     try:
         wait_for(lambda: hub.status()["state"] == "connected")
@@ -84,6 +88,7 @@ def _serve(tmp_path, **parts):
         yield client
     finally:
         hub.stop()
+        parts["uploader"].stop()
         server.shutdown()
         server.server_close()
 
@@ -92,6 +97,40 @@ def _serve(tmp_path, **parts):
 def served(tmp_path):
     """The app as it runs on a laptop: no Wi-Fi control, no updates."""
     yield from _serve(tmp_path)
+
+
+@pytest.fixture
+def central(tmp_path):
+    """A second copy of the app, as a central server that takes recordings from boxes."""
+    home = tmp_path / "central"
+    home.mkdir()
+    yield from _serve(home, accept_uploads=True)
+
+
+def geared_passes(laps: int = 2, every: float = 0.25) -> list:
+    """Passes from the simulated geared Focus, as the adapter would report them."""
+    from cardiag import analysis as a
+    from cardiag.sim import _DCT_LAP, _DCT_STEP, _dct_lap
+
+    lap, stride = _dct_lap(), round(every / _DCT_STEP)
+    return [
+        (
+            n * _DCT_LAP + i * _DCT_STEP,
+            {a.RPM: round(rpm * 4) / 4, a.SPEED: float(round(speed)), a.PEDAL: pedal, a.THROTTLE: max(8.0, pedal), a.LOAD: load},
+        )
+        for n in range(laps)
+        for i, (rpm, speed, pedal, load) in list(enumerate(lap))[::stride]
+    ]
+
+
+def as_recording(passes: list, vin: str = "1FADP3F2XHL654321") -> dict:
+    """Passes in the shape one box sends another."""
+    keys = sorted({key for _, values in passes for key in values})
+    return {
+        "session": {"started_at": 1000.0, "ended_at": 1000.0 + passes[-1][0], "vin": vin, "adapter": "test", "protocol": "CAN", "note": "geared drive"},
+        "signals": [[key, key, ""] for key in keys],
+        "samples": [[cycle, 1000.0 + t, key, value, None] for cycle, (t, values) in enumerate(passes) for key, value in values.items()],
+    }
 
 
 @pytest.fixture

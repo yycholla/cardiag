@@ -3,8 +3,13 @@
 The box has one Wi-Fi radio, so it is either its own hotspot or a member of
 another network, never both. The hotspot is the resting state: it starts at
 every boot, and it comes back whenever joining another network fails or that
-network goes away. Joining a saved network is a deliberate, temporary step for
-working on the box at home, where it can reach the internet.
+network goes away.
+
+Two other networks can be saved. The home network is joined only when asked: a
+deliberate, temporary step for working on the box at home. The travelling
+network is a phone's or tablet's hotspot, which gives the box a way out to the
+internet on the road; the box joins that one by itself whenever it sees it, and
+keeps looking for it while it is away.
 """
 
 from __future__ import annotations
@@ -13,6 +18,7 @@ import os
 import socket
 import subprocess
 import threading
+import time
 from typing import Callable
 
 Run = Callable[[list[str], float], str]
@@ -74,23 +80,30 @@ class Wifi:
         *,
         hotspot: str = "cardiag",
         profile: str = "cardiag-wifi",
+        uplink: str = "cardiag-uplink",
         interface: str = "wlan0",
         run: Run = _nmcli,
         join_timeout: int = 45,
         settle: float = 1.5,
         watch_interval: float = 20.0,
+        retry_after: float = 300.0,
     ) -> None:
         self.hotspot = hotspot  # NetworkManager connection that is the box's own network
-        self.profile = profile  # NetworkManager connection for the one saved network
+        self.profile = profile  # NetworkManager connection for the saved home network
+        self.uplink = uplink  # NetworkManager connection for the saved travelling hotspot
         self.interface = interface
         self._run = run
         self._join_timeout = join_timeout
         self._settle = settle  # lets the reply reach the browser before its network goes away
         self._watch_interval = watch_interval
+        self._retry_after = retry_after  # seconds to leave the travelling hotspot alone after it refused us
 
         self._lock = threading.Lock()
         self._switching: str | None = None  # what the radio is changing to, while it is
         self._problem: str | None = None  # why the last attempt to join failed
+        self._hold = False  # the person asked for the box's own hotspot: do not wander off by itself
+        self._refused_at: float | None = None  # when the travelling hotspot last turned us away
+        self._looks = 0
         self._stop = threading.Event()
         self._threads: list[threading.Thread] = []
 
@@ -120,6 +133,8 @@ class Wifi:
             mode = "hotspot"
         elif active == self.profile:
             mode = "wifi"
+        elif active == self.uplink:
+            mode = "uplink"
         else:
             mode = "offline"
         return {
@@ -128,6 +143,8 @@ class Wifi:
             "address": address,
             "hotspot": self._ssid(self.hotspot),
             "saved": self._ssid(self.profile),
+            "uplink": self._ssid(self.uplink),
+            "uplink_auto": not self._hold,
             "switching": switching,
             "problem": problem,
             "hostname": socket.gethostname(),
@@ -183,17 +200,25 @@ class Wifi:
 
     # ---- changing ----------------------------------------------------------
 
-    def save(self, ssid: object, password: object) -> None:
-        """Remember one network to join. It is never joined by itself, only when asked."""
+    def _named(self, which: object) -> str:
+        if which == "home":
+            return self.profile
+        if which == "uplink":
+            return self.uplink
+        raise ValueError("which must be 'home' or 'uplink'")
+
+    def save(self, ssid: object, password: object, which: object = "home") -> None:
+        """Remember a network. Home is joined only when asked; the travelling hotspot whenever it is seen."""
+        profile = self._named(which)
         if not isinstance(ssid, str) or not 1 <= len(ssid.encode()) <= 32:
             raise ValueError("the network name must be 1 to 32 characters")
         password = password or ""
         if not isinstance(password, str) or (password and not 8 <= len(password) <= 63):
             raise ValueError("a Wi-Fi password is 8 to 63 characters; leave it empty for an open network")
-        if self._active()[0] == self.profile:
+        if self._active()[0] == profile:
             raise ValueError("switch back to the hotspot before changing the saved network")
 
-        args = ["connection", "add", "type", "wifi", "ifname", self.interface, "con-name", self.profile,
+        args = ["connection", "add", "type", "wifi", "ifname", self.interface, "con-name", profile,
                 "ssid", ssid, "connection.autoconnect", "no"]
         if password:
             try:
@@ -206,35 +231,48 @@ class Wifi:
             # processes on the box. NetworkManager then stores it readable by root only.
             args += ["wifi-sec.key-mgmt", "sae" if wpa3_only else "wpa-psk", "wifi-sec.psk", password]
         try:
-            self._run(["connection", "delete", self.profile], 15)
+            self._run(["connection", "delete", profile], 15)
         except NetworkError:
             pass  # nothing was saved before
         self._run(args, 15)
         with self._lock:
             self._problem = None
+            if profile == self.uplink:
+                self._refused_at, self._hold = None, False
 
-    def join(self) -> None:
-        """Leave the hotspot for the saved network. Falls back to the hotspot if that fails."""
-        ssid = self._ssid(self.profile)
+    def join(self, which: object = "home") -> None:
+        """Leave the hotspot for a saved network. Falls back to the hotspot if that fails."""
+        profile = self._named(which)
+        ssid = self._ssid(profile)
         if ssid is None:
             raise ValueError("save a network first")
         self._begin(ssid)
-        self._spawn(lambda: self._join(ssid))
+        if profile == self.uplink:
+            with self._lock:
+                self._hold, self._refused_at = False, None  # asking for it means: keep looking for it
+        self._spawn(lambda: self._join(ssid, profile))
 
     def use_hotspot(self) -> None:
+        """Go back to the box's own hotspot, and stay there until asked otherwise."""
+        leaving_uplink = self._active()[0] == self.uplink
         self._begin(self._ssid(self.hotspot) or self.hotspot)
+        with self._lock:
+            # Leaving the travelling hotspot by hand means "stay put"; leaving home does not.
+            self._hold = leaving_uplink
         self._spawn(self._to_hotspot)
 
-    def forget(self) -> None:
-        was_joined = self._active()[0] == self.profile
+    def forget(self, which: object = "home") -> None:
+        profile = self._named(which)
+        was_joined = self._active()[0] == profile
         try:
-            self._run(["connection", "delete", self.profile], 15)
+            self._run(["connection", "delete", profile], 15)
         except NetworkError:
             pass  # nothing was saved
         with self._lock:
             self._problem = None
         if was_joined:
-            self.use_hotspot()
+            self._begin(self._ssid(self.hotspot) or self.hotspot)
+            self._spawn(self._to_hotspot)
 
     def _begin(self, target: str) -> None:
         with self._lock:
@@ -243,16 +281,18 @@ class Wifi:
             self._switching = target
             self._problem = None
 
-    def _join(self, ssid: str) -> None:
+    def _join(self, ssid: str, profile: str) -> None:
         try:
             if self._stop.wait(self._settle):
                 return
             try:
-                self._run(["--wait", str(self._join_timeout), "connection", "up", self.profile],
+                self._run(["--wait", str(self._join_timeout), "connection", "up", profile],
                           self._join_timeout + 15)
             except NetworkError as exc:
                 with self._lock:
                     self._problem = f"Could not join {ssid}: {_plain_reason(str(exc))}. The hotspot is back on."
+                    if profile == self.uplink:
+                        self._refused_at = time.monotonic()
                 self._hotspot_up()
         finally:
             with self._lock:
@@ -278,7 +318,33 @@ class Wifi:
                 if self._switching:
                     continue
             try:
-                if self._active()[0] is None:
+                active = self._active()[0]
+                if active is None:
                     self._hotspot_up()
+                elif active == self.hotspot:
+                    self._look_for_uplink()
             except NetworkError:
                 pass
+
+    def _look_for_uplink(self) -> None:
+        """On the box's own hotspot: move to the travelling hotspot if it has come into range."""
+        with self._lock:
+            waiting = self._refused_at is not None and time.monotonic() - self._refused_at < self._retry_after
+            if self._hold or waiting:
+                return
+        ssid = self._ssid(self.uplink)
+        if ssid is None:
+            return
+        self._looks += 1
+        try:
+            # A fresh look around interrupts the hotspot for a moment, so only every third time.
+            visible = self._visible(rescan=self._looks % 3 == 1)
+        except NetworkError:
+            visible = self._visible(rescan=False)
+        if not any(network["ssid"] == ssid for network in visible):
+            return
+        try:
+            self._begin(ssid)
+        except ValueError:
+            return  # the person started a switch of their own in the meantime
+        self._join(ssid, self.uplink)

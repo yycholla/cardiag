@@ -149,17 +149,18 @@ async function scenario() {
   // Settings: switching to a simulated car and back.
   routes["/api/network"] = DATA.network;
   routes["/api/update"] = DATA.update;
+  routes["/api/central"] = DATA.central;
   await $("tab-settings").fire("click");
   await settle();
   check(text($("source-state")).includes("Using the real car, through the adapter"), "says the car is real");
   const sourceLabels = () => $("sources").children.map(text).join("|");
-  check(sourceLabels() === "Simulate a Ford Focus|Simulate a Chevrolet Tahoe", "offers the simulated cars: " + sourceLabels());
+  check(sourceLabels() === "Simulate a Ford Focus|Simulate a Ford Focus with a slipping clutch|Simulate a Chevrolet Tahoe", "offers the simulated cars: " + sourceLabels());
   const simRequests = [];
   routes["/api/simulation"] = (options) => {
     simRequests.push(JSON.parse(options.body));
     return simRequests.length === 1 ? DATA.simulating : { error: "no such car" };
   };
-  await $("sources").children[1].fire("click");
+  await $("sources").children[2].fire("click");
   await settle();
   check(simRequests[0].vehicle === "tahoe", "asks for the Tahoe");
   check(DATA.simulating.state === "starting" && text($("link-text")) === "Starting", "shows the switch under way");
@@ -170,7 +171,7 @@ async function scenario() {
   check(text($("link-text")) === "Simulation", "the header says it is a simulation, got " + text($("link-text")));
   check(text($("link-detail")).startsWith("Simulated Chevrolet Tahoe, made-up data · VIN "), "and which car: " + text($("link-detail")));
   check(text($("source-state")).includes("simulated Chevrolet Tahoe, not a real car"), "settings say so too");
-  check(sourceLabels() === "Use the real car|Simulate a Ford Focus", "offers the way back: " + sourceLabels());
+  check(sourceLabels() === "Use the real car|Simulate a Ford Focus|Simulate a Ford Focus with a slipping clutch", "offers the way back: " + sourceLabels());
   check($("tiles").children.length === DATA.tahoe.readings.length, "shows the Tahoe's values");
   await $("sources").children[0].fire("click");
   check(simRequests[1].vehicle === null, "asks for the real car");
@@ -296,6 +297,146 @@ async function scenario() {
   routes["/api/update"] = { managed: false, current: DATA.update.current };
   await loadUpdate();
   check($("update-check").hidden === true && text($("update-version")) === "Version " + DATA.update.current && text($("update-state")) === "", "version only, where updates are not managed");
+
+  // Settings: the central server and the travelling hotspot.
+  check($("central-card").hidden === false && text($("central-state")).includes("Recordings stay on this box"), "central server card: " + text($("central-state")));
+  const centralRequests = [];
+  routes["/api/central"] = (options) => {
+    if (!options.method) return DATA.central;
+    centralRequests.push(JSON.parse(options.body));
+    return Object.assign({}, DATA.central, { url: "http://cardiag-home:8000", waiting: 2, problem: "could not reach the central server; recordings are kept here and sent when it answers" });
+  };
+  $("central-url").value = "cardiag-home:8000";
+  await $("central-save").fire("click");
+  check(centralRequests[0].url === "cardiag-home:8000", "sends the address as typed");
+  check(text($("central-state")).includes("Could not reach the central server") && text($("central-state")).includes("2 recordings are waiting"), "says what is waiting and why: " + text($("central-state")));
+  check($("central-url").value === "http://cardiag-home:8000" && $("central-send").hidden === false, "shows the tidied address and offers to send");
+  showNetwork(DATA.network_uplink);
+  check($("uplink-saved").hidden === false && $("uplink-form").hidden === true, "shows the saved travelling hotspot");
+  check(text($("uplink-state")).includes("Saved: iPad. The box joins it by itself"), "and that it is joined automatically: " + text($("uplink-state")));
+  check($("wifi-hotspot").hidden === true && $("uplink-join").hidden === false, "offers to join it now");
+  showNetwork(Object.assign({}, DATA.network_uplink, { mode: "uplink", address: "172.20.10.4" }));
+  check(text($("wifi-state")).includes("On the travelling hotspot iPad, address 172.20.10.4"), "joined to it: " + text($("wifi-state")));
+  check($("wifi-hotspot").hidden === false && $("uplink-join").hidden === true, "now offers the way back to the own hotspot");
+
+  // Diagnosis, from the server's analysis of the live car.
+  const sane = (node, what) => {
+    const words = text(node);
+    check(!words.includes("NaN") && !words.includes("undefined") && !words.includes("null"), what + " has no stray values: " + words);
+    const bad = node.descendants().filter((item) => item.tag === "path" && /NaN|undefined/.test(String(item.getAttribute("d"))));
+    check(bad.length === 0, what + " draws every line");
+  };
+  routes["/api/sessions"] = DATA.sessions_after;
+  routes["/api/analysis?source=live"] = DATA.analysis_live;
+  await $("tab-diagnosis").fire("click");
+  await settle();
+  check($("report-bar").hidden === false && $("panel-diagnosis").hidden === false, "shows the report bar with the Diagnosis tab");
+  check($("report-source").children.length === DATA.sessions_after.length + 1 && $("report-source").value === "live", "offers live and every recording");
+  const diagnosis = text($("diagnosis"));
+  for (const expected of ["Against the healthy band", "Long-term fuel trim", "Above band", "General guide",
+    "Fuel trim by operating region", "Air flow check", "Warm-up", "Where the engine has been", "Fuel used, estimated"]) {
+    check(diagnosis.includes(expected), "diagnosis shows " + expected);
+  }
+  sane($("diagnosis"), "diagnosis");
+  check(/ updates$/.test(text($("report-note"))), "says how much it is looking at: " + text($("report-note")));
+
+  // Drive, from a recording of a geared car with a slipping third gear.
+  const drivePath = "/api/analysis?source=" + DATA.drive_id + "&against=" + DATA.drive_id;
+  routes[drivePath] = DATA.analysis_drive;
+  await $("tab-drive").fire("click");
+  await settle();
+  check($("panel-drive").hidden === false && $("report-bar").hidden === false, "the report bar stays for the Drive tab");
+  $("report-source").value = String(DATA.drive_id);
+  $("report-against").value = String(DATA.drive_id);
+  await $("report-source").fire("change");
+  const drive = text($("drive"));
+  for (const expected of ["Gear map", "the 6 gears learned", "Gear over time", "Shifts", "2 to 3", "Flare", "Slip by gear",
+    "Slip under load in gear 3", "odd-gear clutch", "Pulling power", "Pedal", "No slower", "What this cannot see"]) {
+    check(drive.includes(expected), "drive shows " + expected);
+  }
+  sane($("drive"), "drive");
+  check(/Shift 2 to 3 at /.test(drive), "opens the worst shift first");
+  const buttons = () => $("drive").descendants().filter((node) => node.tag === "button");
+  check(buttons().filter((node) => text(node) === "Open").length < DATA.analysis_drive.drive.shifts.length, "a long list starts with only the shifts that were not clean");
+  await buttons().find((node) => text(node).startsWith("List all ")).fire("click");
+  check(buttons().filter((node) => text(node) === "Open").length === DATA.analysis_drive.drive.shifts.length, "and can be opened out in full");
+  await buttons().find((node) => text(node) === "Open").fire("click");
+  check(/Shift 1 to 2 at /.test(text($("drive"))), "another shift can be opened");
+  routes[drivePath] = { error: "there is no recording 2" };
+  await $("report-refresh").fire("click");
+  check(text($("report-note")) === "there is no recording 2" && text($("drive")) === "", "a failed report says why and shows nothing stale");
+
+  // A drive capture watches fewer values, records, then puts things back.
+  routes["/api/setup"] = DATA.setup;
+  const watchRequests = [];
+  routes["/api/watch"] = (options) => {
+    watchRequests.push(JSON.parse(options.body).pids);
+    return DATA.values;
+  };
+  routes["/api/analysis?source=1"] = DATA.analysis_live;
+  await $("capture").fire("click");
+  check(JSON.stringify(watchRequests[0]) === JSON.stringify(DATA.setup.drive_pids), "watches only what shifting needs");
+  check(text($("capture")) === "Stop the drive capture" && text($("capture-note")).startsWith("Recording 1."), "capture is running: " + text($("capture-note")));
+  $("report-against").value = "";
+  await $("capture").fire("click");
+  await settle();
+  check(JSON.stringify(watchRequests[1]) === JSON.stringify(DATA.values.watched), "puts the watched values back");
+  check(text($("capture")) === "Start a drive capture" && $("report-source").value === "1", "and shows the recording it made");
+
+  // Setup.
+  await $("tab-setup").fire("click");
+  await settle();
+  check($("setup-steps").hidden === false && $("setup-empty").hidden === true, "shows the steps for a connected car");
+  check(text($("setup-car")).includes("1FADP3F2XHL123456"), "names the car");
+  const offers = text($("setup-offers"));
+  check(offers.includes("Engine (7E8): 20 values") && offers.includes("Transmission (7E9): 1 value"), "lists what each module offers: " + offers.slice(0, 80));
+  check(offers.includes("Accelerator pedal position") && offers.includes("Not offered") && offers.includes("throttle position instead"), "and what is missing");
+  check(text($("setup-summary")).includes("Needs the engine size") && text($("setup-summary")).includes("Gears not learned"), "says what is not ready");
+  const profileRequests = [];
+  routes["/api/setup/profile"] = (options) => {
+    profileRequests.push(JSON.parse(options.body));
+    return profileRequests.length === 1 ? { error: "engine size must be a number of litres, such as 2.0" } : DATA.profile;
+  };
+  $("setup-litres").value = "big";
+  await $("setup-save").fire("click");
+  check(text($("setup-profile-note")).includes("must be a number of litres"), "explains a refused engine size");
+  $("setup-litres").value = "2.0";
+  $("setup-transmission").value = "dual-clutch automatic";
+  await $("setup-save").fire("click");
+  check(profileRequests[1].engine_litres === "2.0" && profileRequests[1].transmission === "dual-clutch automatic", "sends the profile");
+  check(text($("setup-summary")).includes("Uses the 2 L you entered"), "the summary follows: " + text($("setup-summary")));
+
+  routes["/api/setup/baseline"] = { error: "the engine is not warm yet (coolant 20 degrees); try again once it is" };
+  await $("baseline-start").fire("click");
+  check(text($("baseline-note")) === "Keep idling: 60 s to go" && $("baseline-start").disabled === true, "counts the minute down: " + text($("baseline-note")));
+  let ticks = 0;
+  while (timers.length) {
+    timers.shift()();
+    ticks++;
+  }
+  await settle();
+  check(ticks === 60, "one tick a second for a minute, got " + ticks);
+  check(text($("baseline-note")).startsWith("The engine is not warm yet") && $("baseline-start").disabled === false, "then says why no baseline was kept");
+  const kept = { values: { idle_rpm: 780, idle_map: 34, ltft: 12.5 }, seconds: 58, flags: ["long-term fuel trim is beyond ±10 %"], good: false, taken_at: 0 };
+  routes["/api/setup/baseline"] = Object.assign({}, DATA.profile, { baseline: kept });
+  $("baseline-good").checked = true;
+  await $("baseline-start").fire("click");
+  while (timers.length) timers.shift()();
+  await settle();
+  const baselineRequest = JSON.parse(calls.filter((call) => call.path === "/api/setup/baseline").pop().options.body);
+  check(baselineRequest.known_good === true, "passes on that the car is said to be running well");
+  check(text($("baseline-state")).includes("Kept as the current state, not as known good"), "but a flagged baseline is not called good: " + text($("baseline-state")));
+  check(text($("baseline-state")).includes("Long-term fuel trim is beyond ±10 %"), "and says what flagged it");
+
+  routes["/api/setup/gears"] = DATA.gears;
+  await $("gears-learn").fire("click");
+  check(text($("gears-state")).includes("120") && text($("setup-summary")).includes("6 gears learned"), "learned gears are listed: " + text($("gears-state")));
+  routes["/api/setup/gears"] = { error: "no steady gears found there yet; drive gently and hold each gear for a few seconds" };
+  await $("gears-learn").fire("click");
+  check(text($("gears-note")).startsWith("No steady gears found"), "explains when a drive has no gears in it");
+  sane($("setup-steps"), "setup");
+  await $("tab-live").fire("click");
+  check($("report-bar").hidden === true, "the report bar goes away with its tabs");
 
   // A value that stops arriving keeps its tile briefly, then goes.
   const without = Object.assign({}, live[0], { readings: live[0].readings.slice(1) });

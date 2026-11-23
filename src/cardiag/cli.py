@@ -22,6 +22,7 @@ from .obd import DTC_SERVICES, Obd, Reading, ecu_label
 from .service import DEFAULT_LIVE_PIDS, Hub
 from .sim import VEHICLES, PtyAdapter, SimElm, SimTransport
 from .store import Store
+from .sync import Uploader
 from .transport import LinkError, SerialTransport
 from .update import Updater
 from .web import make_server
@@ -325,8 +326,13 @@ def cmd_serve(args: argparse.Namespace) -> int:
     hub = Hub(open_transport, db_path=args.db, interval=args.interval, simulators=simulators, simulation=args.sim)
     wifi = Wifi() if args.manage_wifi else None
     updater = Updater(args.update_dir) if args.update_dir else None
+    uploader = Uploader(args.db)
+    hub.on_recorded = uploader.wake
     try:
-        server = make_server(hub, args.host, args.web_port, args.db, wifi=wifi, updater=updater)
+        server = make_server(
+            hub, args.host, args.web_port, args.db,
+            wifi=wifi, updater=updater, uploader=uploader, accept_uploads=args.accept_uploads,
+        )
     except OSError as exc:
         print(f"error: cannot listen on {args.host}:{args.web_port}: {exc}", file=sys.stderr)
         return 1
@@ -340,6 +346,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
         print(f"Serving at http://{args.host}:{port}  (add --host 0.0.0.0 to reach it from other devices)")
     print("Ctrl-C to stop.", flush=True)
     hub.start()
+    uploader.start()
     if wifi:
         wifi.start()
     confirm = None
@@ -357,6 +364,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
             confirm.cancel()
         server.server_close()
         hub.stop()
+        uploader.stop()
         if wifi:
             wifi.stop()
     if server.restarting:
@@ -413,6 +421,8 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--interval", type=float, default=0.25, help="minimum seconds between updates (default 0.25)")
     serve.add_argument("--manage-wifi", action="store_true", help="let the page switch this machine between its hotspot and a Wi-Fi network (for the box in the car; needs NetworkManager)")
     serve.add_argument("--update-dir", metavar="DIR", help="let the page install new releases into DIR, where this copy was installed (for the box in the car)")
+
+    serve.add_argument("--accept-uploads", action="store_true", help="let other cardiag boxes send their recordings here (for a central server on a private network)")
 
     add("ports", cmd_ports, "list serial ports and flag likely OBD adapters")
     serve = add("sim-serve", cmd_sim_serve, "run a simulated adapter as a serial device for testing")

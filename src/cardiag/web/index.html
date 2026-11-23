@@ -8,30 +8,47 @@
 <meta name="color-scheme" content="light dark">
 <title>cardiag</title>
 <style>
+  /* Layout: a dense instrument page. One blue marks data; amber and red appear only where something needs attention. */
   :root {
     color-scheme: light dark;
-    --plane: #f9f9f7;
-    --surface: #fcfcfb;
-    --ink: #0b0b0b;
-    --ink-2: #52514e;
-    --trend: #898781;
-    --hairline: #e1e0d9;
-    --border: rgba(11, 11, 11, 0.10);
-    --accent: #2a78d6;
-    --button: #256abf;
-    --good: #0ca30c;
-    --warning: #fab219;
-    --critical: #d03b3b;
+    --plane: #edf0f4;
+    --surface: #ffffff;
+    --surface-2: #f3f5f8;
+    --ink: #121923;
+    --ink-2: #465364;
+    --ink-3: #5b6878;
+    --hairline: #d3d9e1;
+    --border: #c9d0da;
+    --signal: #0b6aa8;
+    --signal-fill: rgba(11, 106, 168, 0.10);
+    --button: #0b6aa8;
+    --button-ink: #ffffff;
+    --good: #0f6f63;
+    --warning: #8a5300;
+    --warning-fill: rgba(214, 138, 0, 0.16);
+    --critical: #b3261e;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --cond: "Avenir Next Condensed", "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --plane: #0d0d0d;
-      --surface: #1a1a19;
-      --ink: #f0efec;
-      --ink-2: #c3c2b7;
-      --hairline: #2c2c2a;
-      --border: rgba(255, 255, 255, 0.10);
-      --accent: #3987e5;
+      --plane: #0e131a;
+      --surface: #151b24;
+      --surface-2: #1c2431;
+      --ink: #e8edf3;
+      --ink-2: #a3b2c4;
+      --ink-3: #8494a8;
+      --hairline: #2a3545;
+      --border: #344154;
+      --signal: #6cc4f5;
+      --signal-fill: rgba(108, 196, 245, 0.14);
+      --button: #6cc4f5;
+      --button-ink: #08131c;
+      --good: #5cc8b8;
+      --warning: #f5b041;
+      --warning-fill: rgba(245, 176, 65, 0.13);
+      --critical: #ff7b72;
     }
   }
   * { box-sizing: border-box; }
@@ -40,96 +57,162 @@
     margin: 0;
     background: var(--plane);
     color: var(--ink);
-    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+    font: 15px/1.4 var(--sans);
     -webkit-text-size-adjust: 100%;
   }
   .app {
-    max-width: 960px;
+    max-width: 1500px;
     margin: 0 auto;
     padding: 12px max(14px, env(safe-area-inset-right)) 32px max(14px, env(safe-area-inset-left));
   }
   .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  h1 { margin: 0; font-size: 18px; font-weight: 600; }
-  h3 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+  h1 { margin: 0; font: 600 22px/1 var(--cond); letter-spacing: 0.02em; }
+  h3 { margin: 0 0 8px; font: 600 14px/1.2 var(--cond); letter-spacing: 0.06em; text-transform: uppercase; }
+  h4 { margin: 14px 0 6px; font: 600 12px/1.2 var(--cond); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
   .link, .status { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-  .status { margin-top: 12px; }
-  .link-detail { margin: 4px 0 12px; min-height: 18px; color: var(--ink-2); font-size: 13px; overflow-wrap: anywhere; }
+  .link { min-height: 32px; padding: 0 12px; border: 1px solid var(--hairline); border-radius: 999px; background: var(--surface); font-size: 13px; }
+  .status { margin-top: 10px; font-size: 14px; }
+  .link-detail { margin: 6px 0 12px; min-height: 18px; color: var(--ink-2); font: 12px/1.4 var(--mono); overflow-wrap: anywhere; }
   .secondary { color: var(--ink-2); }
   .small { font-size: 13px; }
+  .lbl { font: 600 11px/1.2 var(--cond); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
 
   /* Status is always an icon plus words, never colour alone. */
   .icon {
     display: inline-flex; align-items: center; justify-content: center; flex: none;
-    width: 20px; height: 20px; border-radius: 50%;
-    color: #fff; font-size: 12px; font-weight: 700; line-height: 1;
+    width: 18px; height: 18px; border-radius: 50%;
+    color: var(--surface); font-size: 11px; font-weight: 700; line-height: 1;
   }
   .icon.good { background: var(--good); }
-  .icon.warning { background: var(--warning); color: #0b0b0b; }
+  .icon.warning { background: var(--warning); }
   .icon.critical { background: var(--critical); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .chip.ok { padding-left: 0; color: var(--ink-2); font-weight: 400; }
+  .chip.warning { background: var(--warning-fill); color: var(--warning); }
 
-  .tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid var(--hairline); overflow-x: auto; }
+  .tabs { display: flex; gap: 2px; margin-bottom: 14px; border-bottom: 1px solid var(--hairline); overflow-x: auto; }
   .tabs button {
     flex: 1 0 auto; min-height: 44px; padding: 0 14px;
     border: 0; border-bottom: 2px solid transparent; background: none;
-    color: var(--ink-2); font: inherit; font-weight: 600; cursor: pointer;
+    color: var(--ink-2); font: 600 13px var(--sans); cursor: pointer;
   }
-  .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+  .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--signal); }
 
-  button.primary, a.button {
-    display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px;
-    border: 0; border-radius: 8px; background: var(--button);
-    color: #fff; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
+  button.primary, a.button, button.quiet {
+    display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px;
+    border-radius: 4px; font: 600 13px var(--sans); text-decoration: none; cursor: pointer;
   }
-  button.quiet {
-    display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px;
-    border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
-    color: var(--ink); font: inherit; font-weight: 600; cursor: pointer;
-  }
+  button.primary, a.button { border: 1px solid var(--button); background: var(--button); color: var(--button-ink); }
+  button.quiet { border: 1px solid var(--border); background: var(--surface-2); color: var(--ink); }
+  button.quiet[aria-pressed="true"] { border-color: var(--signal); }
+  button.slim { min-height: 32px; padding: 0 12px; font-size: 12px; }
   button:disabled { opacity: 0.45; cursor: default; }
   .card .toolbar { margin-top: 10px; }
   .card p { margin: 8px 0 0; }
   .notes { white-space: pre-wrap; overflow-wrap: anywhere; }
   .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-  .toolbar input {
+  .toolbar input, .toolbar select {
     flex: 1 1 180px; min-height: 44px; padding: 0 12px;
-    border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 4px; background: var(--surface);
     color: var(--ink); font: inherit;
   }
+  .toolbar select { flex: 0 1 260px; }
   details { margin: 10px 0; }
   summary { min-height: 44px; display: flex; align-items: center; color: var(--ink-2); font-weight: 600; cursor: pointer; }
   .choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0 12px; }
   .choice { display: flex; align-items: center; gap: 8px; min-height: 40px; }
   .choice input { width: 18px; height: 18px; flex: none; }
 
-  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-  .tile, .card { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
-  .tile { padding: 12px 12px 10px; min-width: 0; }
-  .card { margin-top: 12px; padding: 14px; }
-  .label { color: var(--ink-2); font-size: 13px; }
-  .value { margin-top: 2px; }
-  .num { font-size: 28px; font-weight: 600; line-height: 1.15; }
-  .num.words { font-size: 16px; }
-  .unit { color: var(--ink-2); font-size: 13px; }
-  .caption { min-height: 16px; margin-top: 4px; color: var(--ink-2); font-size: 12px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 8px; }
+  .tile, .card { border: 1px solid var(--hairline); border-radius: 4px; background: var(--surface); }
+  .tile { padding: 10px 12px 8px; min-width: 0; }
+  .card { margin-top: 12px; padding: 12px 14px; min-width: 0; }
+  .grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+  .grid .card { flex: 1 1 380px; margin-top: 0; }
+  .grid .wide { flex-basis: 100%; }
+  .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 8px; }
+  .head h3 { margin: 0; }
+  .label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-height: 27px; font: 600 11px/1.2 var(--cond); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+  .pid { flex: none; font: 400 11px var(--mono); letter-spacing: 0; color: var(--ink-3); }
+  .value { margin-top: 4px; }
+  .num { font: 500 26px/1.15 var(--mono); font-variant-numeric: tabular-nums; }
+  .num.words { font: 600 15px/1.3 var(--sans); }
+  .num.big { font-size: 30px; }
+  .unit { color: var(--ink-2); font-size: 12px; }
+  .caption { min-height: 16px; margin-top: 4px; color: var(--ink-3); font: 11px var(--mono); }
 
-  /* Trend line: quiet grey, with only the latest point in the accent colour. */
-  .spark { display: block; width: 100%; height: 32px; margin-top: 8px; overflow: visible; touch-action: pan-y; }
+  /* Trend line in the data colour, with the latest point marked. */
+  .spark { display: block; width: 100%; height: 32px; margin-top: 6px; overflow: visible; touch-action: pan-y; }
   .spark path, .spark line { fill: none; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
-  .trend { stroke: var(--trend); stroke-width: 2; }
-  .ring { stroke: var(--surface); stroke-width: 12; }
-  .dot { stroke: var(--accent); stroke-width: 8; }
+  .trend { stroke: var(--signal); stroke-width: 1.5; }
+  .ring { stroke: var(--surface); stroke-width: 10; }
+  .dot { stroke: var(--ink); stroke-width: 6; }
   .cross { stroke: var(--ink-2); stroke-width: 1; }
+
+  .plot { display: block; width: 100%; border-top: 1px dashed var(--hairline); border-bottom: 1px dashed var(--hairline); }
+  .plot path { fill: none; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+  .plot .p-area { fill: var(--signal-fill); stroke: none; }
+  .p-line { stroke: var(--signal); stroke-width: 1.5; }
+  .p-ref { stroke: var(--ink-2); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .p-guide { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 4; }
+  .p-dots { stroke: var(--signal); stroke-width: 4; }
+  .p-warn { stroke: var(--warning); stroke-width: 5; }
+  .p-faint { stroke: var(--ink-3); stroke-width: 3; }
+  .axis { display: flex; justify-content: space-between; gap: 8px; margin: 3px 0; color: var(--ink-3); font: 11px var(--mono); }
+  .trace { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+  .trace .lbl { flex: 0 0 96px; }
+  .trace .plot { flex: 1 1 0; min-width: 0; border-top: 0; }
+
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { padding: 6px 10px 6px 0; border-top: 1px solid var(--hairline); text-align: left; white-space: nowrap; vertical-align: middle; }
+  th { border-top: 0; font: 600 11px/1.2 var(--cond); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+  td.n, th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  td.wrap { white-space: normal; min-width: 200px; color: var(--ink-2); }
+  tr.sel td { background: var(--surface-2); }
+  .bar { position: relative; height: 14px; min-width: 150px; background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 2px; }
+  .bar .band { position: absolute; top: 0; bottom: 0; background: var(--signal-fill); border-left: 1px solid var(--signal); border-right: 1px solid var(--signal); }
+  .bar .tick { position: absolute; top: -4px; bottom: -4px; width: 3px; margin-left: -1px; background: var(--ink); }
+  .bar .tick.out { background: var(--warning); }
+  .bar .fill { height: 100%; background: var(--signal); }
+  .bar .fill.out { background: var(--warning); }
+  .barrow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 8px; font-size: 13px; }
+  .barrow .name { flex: 0 0 104px; font: 12px var(--mono); color: var(--ink-2); }
+  .barrow .bar { flex: 1 1 90px; min-width: 70px; }
+  .barrow .figure { flex: 0 0 64px; text-align: right; font: 600 13px var(--mono); }
+  .barrow .secondary { flex: 0 0 auto; white-space: nowrap; font-size: 12px; }
+  .map { display: grid; gap: 4px; min-width: 620px; }
+  .cell { min-height: 46px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 3px 6px; border: 1px solid var(--hairline); border-radius: 3px; font: 600 13px var(--mono); }
+  .cell small { font: 400 11px var(--mono); color: var(--ink-2); }
+  .cell.empty { border-style: dashed; color: var(--ink-3); font-weight: 400; font-size: 11px; }
+  .cell.mark { border: 2px solid var(--ink); }
+  .cell.edge { align-items: flex-start; border: 0; font: 600 11px/1.2 var(--cond); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); min-height: 0; }
+  .lane { position: relative; height: 26px; margin-top: 4px; }
+  .lane span { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 2px; font: 600 12px var(--mono); }
+  .reading { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--hairline); color: var(--ink-2); font-size: 13px; }
+  .facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; margin: 0; font-size: 13px; }
+  .facts dt { font: 600 11px/1.6 var(--cond); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+  .facts dd { margin: 0; overflow-wrap: anywhere; }
+  .offers { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 2px 14px; font-size: 13px; }
+  .offers span { color: var(--ink-3); font: 12px var(--mono); margin-right: 8px; }
+  .step { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; margin-right: 8px; border: 1px solid var(--border); border-radius: 50%; font: 600 12px var(--mono); letter-spacing: 0; }
+  .check { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+  .check input { width: 18px; height: 18px; flex: none; }
+  ul.plain { margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 13px; }
+  ul.plain li { margin-top: 6px; }
 
   .kinds { display: grid; grid-template-columns: max-content 1fr; gap: 8px 14px; margin: 0; }
   .kinds dt { color: var(--ink-2); }
   .kinds dd { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
   .code {
-    padding: 1px 8px; border: 1px solid var(--border); border-radius: 6px;
-    font: 600 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    padding: 1px 7px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface-2);
+    font: 600 13px var(--mono);
   }
   .rows { margin: 8px 0 0; padding: 0; list-style: none; }
-  .rows li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--hairline); }
-  .rows .figure { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rows li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid var(--hairline); font-size: 14px; }
+  .rows .figure { font: 13px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .rows .state { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
   .session { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 </style>
@@ -148,7 +231,10 @@
     <button role="tab" id="tab-live" aria-selected="true">Live</button>
     <button role="tab" id="tab-codes" aria-selected="false">Codes</button>
     <button role="tab" id="tab-readiness" aria-selected="false">Readiness</button>
+    <button role="tab" id="tab-diagnosis" aria-selected="false">Diagnosis</button>
+    <button role="tab" id="tab-drive" aria-selected="false">Drive</button>
     <button role="tab" id="tab-sessions" aria-selected="false">Recordings</button>
+    <button role="tab" id="tab-setup" aria-selected="false">Setup</button>
     <button role="tab" id="tab-settings" aria-selected="false">Settings</button>
   </nav>
 
@@ -178,6 +264,80 @@
       <div id="monitors"></div>
     </section>
 
+    <div class="toolbar" id="report-bar" hidden>
+      <label class="lbl" for="report-source">Showing</label>
+      <select id="report-source"></select>
+      <label class="lbl" for="report-against">Against</label>
+      <select id="report-against"></select>
+      <button class="quiet" id="report-refresh">Refresh</button>
+      <span class="secondary small" id="report-note"></span>
+    </div>
+
+    <section id="panel-diagnosis" hidden>
+      <div id="diagnosis"></div>
+    </section>
+
+    <section id="panel-drive" hidden>
+      <div class="card">
+        <div class="head"><h3>Drive capture</h3><span class="secondary small">Reads only the values shifting needs, so each is read more often</span></div>
+        <div class="toolbar">
+          <button class="primary" id="capture" disabled>Start a drive capture</button>
+          <span class="secondary small" id="capture-note"></span>
+        </div>
+      </div>
+      <div id="drive"></div>
+    </section>
+
+    <section id="panel-setup" hidden>
+      <p class="secondary" id="setup-empty">Connect to the car to set it up. Setup is kept per car.</p>
+      <div id="setup-steps" hidden>
+        <div class="card">
+          <h3><span class="step">1</span>Adapter and car</h3>
+          <div id="setup-car"></div>
+        </div>
+        <div class="card">
+          <h3><span class="step">2</span>What the car offers</h3>
+          <div id="setup-offers"></div>
+        </div>
+        <div class="card">
+          <h3><span class="step">3</span>Car profile</h3>
+          <p class="secondary small">The car does not report its engine size or transmission. The air flow check needs the first; the Drive page words its findings by the second.</p>
+          <div class="toolbar">
+            <input id="setup-litres" type="text" inputmode="decimal" maxlength="5" placeholder="Engine size in litres, e.g. 2.0" aria-label="Engine size in litres">
+            <select id="setup-transmission" aria-label="Transmission"></select>
+            <select id="setup-fuel" aria-label="Fuel"></select>
+            <button class="primary" id="setup-save">Save</button>
+          </div>
+          <p class="secondary small" id="setup-profile-note"></p>
+        </div>
+        <div class="card">
+          <h3><span class="step">4</span>Idle baseline</h3>
+          <p class="secondary small">Park with the engine warm, air conditioning and lights off, and leave it idling. After a minute the averages are kept as this car's own healthy bands.</p>
+          <label class="check"><input id="baseline-good" type="checkbox">The car is running well right now, with no faults I know of</label>
+          <div class="toolbar">
+            <button class="primary" id="baseline-start">Start a 60 second idle capture</button>
+            <span class="secondary small" id="baseline-note"></span>
+          </div>
+          <div id="baseline-state"></div>
+        </div>
+        <div class="card">
+          <h3><span class="step">5</span>Gear learning</h3>
+          <p class="secondary small">Drive gently and hold a steady speed for a few seconds in each gear, starting from first. A light foot keeps the clutches locked, which is what the gear lines need. Then learn from that drive, live or from a recording of it.</p>
+          <div class="toolbar">
+            <select id="gears-source" aria-label="Drive to learn from"></select>
+            <button class="primary" id="gears-learn">Learn the gears</button>
+            <button class="quiet" id="gears-clear">Forget them</button>
+          </div>
+          <p class="secondary small" id="gears-note"></p>
+          <div id="gears-state"></div>
+        </div>
+        <div class="card">
+          <h3>Ready to use</h3>
+          <div id="setup-summary"></div>
+        </div>
+      </div>
+    </section>
+
     <section id="panel-sessions" hidden>
       <div id="sessions"></div>
     </section>
@@ -193,10 +353,13 @@
       <div class="card" id="wifi-card" hidden>
         <h3>Wi-Fi</h3>
         <div id="wifi-state"></div>
+        <div class="toolbar">
+          <button class="primary" id="wifi-hotspot" hidden>Switch back to the hotspot</button>
+        </div>
+        <h4>Home network</h4>
         <div id="wifi-saved" hidden>
           <div class="toolbar">
             <button class="primary" id="wifi-join">Join</button>
-            <button class="primary" id="wifi-hotspot">Switch back to the hotspot</button>
             <button class="quiet" id="wifi-forget">Forget this network</button>
           </div>
         </div>
@@ -212,7 +375,34 @@
             <button class="primary" id="wifi-save">Save</button>
           </div>
         </div>
+        <h4>Travelling hotspot</h4>
+        <div id="uplink-state"></div>
+        <div id="uplink-saved" hidden>
+          <div class="toolbar">
+            <button class="primary" id="uplink-join">Join it now</button>
+            <button class="quiet" id="uplink-forget">Forget this hotspot</button>
+          </div>
+        </div>
+        <div id="uplink-form" hidden>
+          <p class="secondary small">Save your phone's or tablet's hotspot to give this box a way out to the internet on the road. The box joins it by itself whenever it is in range, and keeps looking for it while it is away.</p>
+          <div class="toolbar">
+            <input id="uplink-ssid" type="text" maxlength="32" autocapitalize="off" autocomplete="off" placeholder="Hotspot name" aria-label="Hotspot name">
+            <input id="uplink-password" type="password" maxlength="63" autocomplete="off" placeholder="Password" aria-label="Hotspot password">
+            <button class="primary" id="uplink-save">Save</button>
+          </div>
+        </div>
         <p class="secondary small" id="wifi-note"></p>
+      </div>
+
+      <div class="card" id="central-card" hidden>
+        <h3>Central server</h3>
+        <div id="central-state"></div>
+        <p class="secondary small">Finished recordings are sent to another copy of cardiag, started with --accept-uploads, whenever this box can reach it. There is no login, so use an address on a private network such as Tailscale.</p>
+        <div class="toolbar">
+          <input id="central-url" type="text" maxlength="200" autocapitalize="off" autocomplete="off" placeholder="http://cardiag-home:8000" aria-label="Central server address">
+          <button class="primary" id="central-save">Save</button>
+          <button class="quiet" id="central-send">Send now</button>
+        </div>
       </div>
 
       <div class="card">
@@ -241,8 +431,8 @@ const SPARK_H = 32;
 const SPARK_PLOT_W = 96;   // leaves room at the right edge for the latest-point dot
 const SPARK_PAD = 5;
 const GLYPH = { good: "✓", warning: "!", critical: "✕" };
-const TABS = ["live", "codes", "readiness", "sessions", "settings"];
-const VEHICLE_NAMES = { focus: "Ford Focus", tahoe: "Chevrolet Tahoe" };
+const TABS = ["live", "codes", "readiness", "diagnosis", "drive", "sessions", "setup", "settings"];
+const VEHICLE_NAMES = { focus: "Ford Focus", focus_dct: "Ford Focus with a slipping clutch", tahoe: "Chevrolet Tahoe" };
 const NETWORK_POLL_MS = 3000;
 const KINDS = [["stored", "Stored"], ["pending", "Pending"], ["permanent", "Permanent"]];
 
@@ -333,6 +523,7 @@ function showStatus(status) {
   const recording = status.recording;
   $("record").textContent = recording ? "Stop recording" : "Start recording";
   $("record").disabled = status.state !== "connected";
+  $("capture").disabled = status.state !== "connected";
   $("note").hidden = Boolean(recording);
   $("record-status").textContent = recording
     ? "Recording " + recording.session + " · " + fmtDuration(recording.seconds)
@@ -346,8 +537,10 @@ function showStatus(status) {
     }
     lastState = status.state;
     lastSource = source;
-    if (status.state === "connected") loadChoices();
-    else clearTiles();
+    if (status.state === "connected") {
+      loadChoices();
+      loadCarTab();  // the open tab was emptied above, or opened before the car answered
+    } else clearTiles();
     showSources(status);
   }
 }
@@ -411,7 +604,7 @@ function buildTile(reading) {
     }, tile.cross, tile.trend, tile.ring, tile.dot);
   }
   tile.root = el("div", { class: "tile" },
-    el("div", { class: "label" }, reading.name),
+    el("div", { class: "label" }, reading.name, el("span", { class: "pid" }, reading.key.startsWith("adapter") ? "AT RV" : reading.key.split(":").pop())),
     el("div", { class: "value" }, tile.num, " ", el("span", { class: "unit" }, reading.unit)),
     chart,
     tile.caption);
@@ -522,8 +715,18 @@ let reportEpoch = 0;  // goes up when the car changes, so answers about the last
 
 function clearReports() {
   reportEpoch++;
+  lastCodes = null;
+  report = null;
+  setup = null;
+  capture = null;
   $("codes").replaceChildren();
   $("monitors").replaceChildren();
+  $("diagnosis").replaceChildren();
+  $("drive").replaceChildren();
+  $("report-note").textContent = "";
+  $("setup-steps").hidden = true;
+  $("setup-empty").hidden = false;
+  drawCapture();
 }
 
 function codeList(codes) {
@@ -568,6 +771,7 @@ async function readCodes() {
           el("span", { class: "figure" }, (fmt(reading.value) + " " + reading.unit).trim()))))));
   }
   box.replaceChildren(...parts);
+  lastCodes = report;
 }
 
 /* ---- readiness ----------------------------------------------------------- */
@@ -619,6 +823,8 @@ async function loadSessions() {
     const length = session.ended_at === null ? "not finished" : fmtDuration(session.ended_at - session.started_at);
     const facts = [new Date(session.started_at * 1000).toLocaleString(), length, session.passes + " updates"];
     if (session.vin) facts.push("VIN " + session.vin);
+    if (session.origin) facts.push("from " + session.origin);
+    if (session.sent) facts.push("sent to the central server");
     return el("div", { class: "card session" },
       el("div", null,
         el("h3", null, "Recording " + session.id + (session.note ? ": " + session.note : "")),
@@ -674,6 +880,8 @@ function showNetwork(status) {
   else if (status.mode === "hotspot") lines.push(statusLine("good", "Hotspot " + status.hotspot + " is on"));
   else if (status.mode === "wifi") {
     lines.push(statusLine("good", "On Wi-Fi network " + status.saved + (status.address ? ", address " + status.address : "")));
+  } else if (status.mode === "uplink") {
+    lines.push(statusLine("good", "On the travelling hotspot " + status.uplink + (status.address ? ", address " + status.address : "")));
   } else lines.push(statusLine("warning", "Not on any network; the hotspot comes back by itself"));
   if (status.problem) lines.push(problem(status.problem));
   $("wifi-state").replaceChildren(...lines);
@@ -684,8 +892,16 @@ function showNetwork(status) {
   $("wifi-form").hidden = saved;
   $("wifi-join").textContent = "Join " + (status.saved || "");
   $("wifi-join").hidden = status.mode === "wifi";
-  $("wifi-hotspot").hidden = status.mode !== "wifi";
-  for (const id of ["wifi-join", "wifi-hotspot", "wifi-forget", "wifi-save"]) $(id).disabled = busy;
+  $("wifi-hotspot").hidden = status.mode !== "wifi" && status.mode !== "uplink";
+  const travelling = Boolean(status.uplink);
+  $("uplink-saved").hidden = !travelling;
+  $("uplink-form").hidden = travelling;
+  $("uplink-join").hidden = status.mode === "uplink";
+  $("uplink-state").replaceChildren(...(travelling ? [el("p", { class: "secondary small" },
+    status.mode === "uplink" ? "Joined to " + status.uplink + ". If it goes away, the box's own hotspot comes back and the box keeps looking for it."
+      : status.uplink_auto ? "Saved: " + status.uplink + ". The box joins it by itself when it comes into range."
+        : "Saved: " + status.uplink + ". The box is staying on its own hotspot until you press Join it now.")] : []));
+  for (const id of ["wifi-join", "wifi-hotspot", "wifi-forget", "wifi-save", "uplink-join", "uplink-forget", "uplink-save"]) $(id).disabled = busy;
 
   // While the radio is changing over, keep asking until it settles (or this page loses the box).
   if (busy && networkTimer === null) {
@@ -744,9 +960,21 @@ function joinNetwork() {
     "If the box cannot join " + name + ", the hotspot comes back within about a minute.");
 }
 
+async function saveUplink() {
+  const saved = await changeNetwork({ action: "save", which: "uplink", ssid: $("uplink-ssid").value, password: $("uplink-password").value });
+  if (saved) $("uplink-password").value = "";
+}
+
+function joinUplink() {
+  return changeNetwork({ action: "join", which: "uplink" },
+    "The " + network.hotspot + " hotspot switches off in a moment, so this page will stop responding. " +
+    "Put this device on " + network.uplink + " as well, or use that device itself, and open " + pageAddress(network.hostname) + ". " +
+    "If the box cannot join " + network.uplink + ", its own hotspot comes back within about a minute.");
+}
+
 function useHotspot() {
   return changeNetwork({ action: "hotspot" },
-    "The box is leaving " + network.saved + ", so this page will stop responding. " +
+    "The box is leaving " + (network.mode === "uplink" ? network.uplink : network.saved) + ", so this page will stop responding. " +
     "Put this device on the " + network.hotspot + " hotspot and open " + pageAddress(network.hostname) + ".");
 }
 
@@ -803,17 +1031,702 @@ async function installUpdate() {
   showUpdate("Version " + result.installed + " is installed. The app is restarting; this page reloads by itself.", "good");
 }
 
+/* ---- reports: figures shared by the Diagnosis and Drive tabs ------------------ */
+
+let report = null;       // latest figures from the server
+let lastCodes = null;    // latest trouble-code report, for marking where a code was set
+let shiftOpen = null;    // which shift's detail is on show
+let shiftsAll = false;   // whether clean shifts are listed too, when there are many
+let setup = null;        // latest setup report
+let capture = null;      // a drive capture in progress: {watched, session}
+let baselineLeft = 0;    // seconds of the idle capture still to run
+
+function fillSelect(select, options) {
+  const keep = select.value;
+  select.replaceChildren(...options.map(([value, label]) => el("option", { value }, label)));
+  const values = options.map(([value]) => value);
+  select.value = values.includes(keep) ? keep : values[0];
+}
+
+async function loadReportSources() {
+  const list = await api("/api/sessions");
+  const recordings = list.error ? [] : list.slice().reverse().map((session) =>
+    [String(session.id), "Recording " + session.id + (session.note ? ": " + session.note : "")]);
+  fillSelect($("report-source"), [["live", "Live, since connecting"], ...recordings]);
+  fillSelect($("report-against"), [["", "Nothing"], ...recordings]);
+  fillSelect($("gears-source"), [["live", "The drive so far, live"], ...recordings]);
+}
+
+async function loadReport() {
+  const source = $("report-source").value || "live";
+  const against = $("report-against").value;
+  const epoch = reportEpoch;
+  $("report-note").textContent = "Working…";
+  const result = await api("/api/analysis?source=" + source + (against ? "&against=" + against : ""));
+  if (epoch !== reportEpoch) return;
+  report = result.error ? null : result;
+  shiftOpen = null;
+  $("report-note").textContent = result.error
+    || (result.passes ? fmtDuration(result.seconds) + ", " + result.passes.toLocaleString("en-US") + " updates" : "");
+  renderDiagnosis();
+  renderDrive();
+}
+
+function card(title, sub, ...body) {
+  return el("div", { class: "card" },
+    el("div", { class: "head" }, el("h3", null, title), sub ? el("span", { class: "secondary small" }, sub) : null),
+    body);
+}
+
+function wide(node) {
+  node.setAttribute("class", "card wide");
+  return node;
+}
+
+function lacking(title, section) {
+  return card(title, null, el("p", { class: "secondary" }, "Needs: " + section.needs.join(", ") + "."));
+}
+
+function chip(ok, text) {
+  return el("span", { class: "chip " + (ok ? "ok" : "warning") }, (ok ? GLYPH.good : GLYPH.warning) + " " + text);
+}
+
+/* A table; a heading that starts with # is a column of right-aligned numbers. */
+function table(headings, rows) {
+  return el("div", { class: "scroll" }, el("table", null,
+    el("thead", null, el("tr", null, headings.map((heading) =>
+      el("th", { class: heading.startsWith("#") ? "n" : null }, heading.replace("#", ""))))),
+    el("tbody", null, rows)));
+}
+
+function td(content, kind) {
+  return el("td", { class: kind || null }, content);
+}
+
+function signed(value) {
+  return (value > 0 ? "+" : "") + fmt(value);
+}
+
+function capital(text) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function percentOf(value, low, high) {
+  return Math.max(0, Math.min(100, (value - low) / (high - low) * 100));
+}
+
+function reading(text) {
+  return el("div", { class: "reading" }, text);
+}
+
+function axis(left, right) {
+  return el("div", { class: "axis" }, el("span", null, left), el("span", null, right));
+}
+
+/* Maps a value range onto a drawing size, leaving a margin; flip turns it upside down for a y axis. */
+function scaler(low, high, size, margin, flip) {
+  const span = high - low || 1;
+  return (value) => {
+    const at = margin + (value - low) / span * (size - 2 * margin);
+    return flip ? size - at : at;
+  };
+}
+
+function linePath(points, sx, sy, column) {
+  const y = column || 1;
+  return points.map((p, i) => (i ? "L" : "M") + sx(p[0]).toFixed(1) + " " + sy(p[y]).toFixed(1)).join(" ");
+}
+
+function dotPath(points, sx, sy) {
+  return points.map((p) => "M" + sx(p[0]).toFixed(1) + " " + sy(p[1]).toFixed(1) + "h0.01").join(" ");
+}
+
+function plot(height, width, depth, label, ...paths) {
+  return el("svg", {
+    class: "plot", viewBox: "0 0 " + width + " " + depth, preserveAspectRatio: "none",
+    role: "img", "aria-label": label, style: "height:" + height + "px",
+  }, paths);
+}
+
+function stroke(kind, d) {
+  return el("path", { class: kind, d });
+}
+
+function edgeLabels(edges) {
+  return edges.slice(0, -1).map((low, i) => {
+    if (i === 0) return "under " + fmt(edges[1]);
+    if (i === edges.length - 2) return fmt(low) + " and up";
+    return fmt(low) + " to " + fmt(edges[i + 1]);
+  });
+}
+
+function barRow(name, share, figure, out, note) {
+  return el("div", { class: "barrow" },
+    el("span", { class: "name" }, name),
+    el("div", { class: "bar" }, el("div", { class: "fill" + (out ? " out" : ""), style: "width:" + share + "%" })),
+    el("span", { class: "figure" }, figure),
+    note ? el("span", { class: "secondary small" }, note) : null);
+}
+
+/* ---- diagnosis ----------------------------------------------------------------- */
+
+function renderDiagnosis() {
+  const box = $("diagnosis");
+  if (!report) {
+    box.replaceChildren();
+    return;
+  }
+  if (!report.passes) {
+    box.replaceChildren(el("p", { class: "secondary" }, "Nothing to show yet. Connect to the car, or pick a recording."));
+    return;
+  }
+  box.replaceChildren(el("div", { class: "grid" },
+    healthyCard(report.healthy), trimCard(report.trim_map), airCard(report.air_flow), warmCard(report.warm_up),
+    bandsCard(report.speed_bands), fuelCard(report.fuel), report.compare ? compareCard(report) : null));
+}
+
+function healthyCard(healthy) {
+  if (!healthy.available) return wide(lacking("Against the healthy band", healthy));
+  const rows = healthy.rows.map((row) => {
+    const [low, high] = row.scale;
+    const left = percentOf(row.low, low, high);
+    const inside = row.result === "inside";
+    return el("tr", null,
+      td(row.name), td(row.when, "wrap"), td(fmt(row.value) + " " + row.unit, "n"),
+      td(fmt(row.low) + " to " + fmt(row.high), "n"),
+      td(el("div", { class: "bar" },
+        el("div", { class: "band", style: "left:" + left + "%;width:" + (percentOf(row.high, low, high) - left) + "%" }),
+        el("div", { class: "tick" + (inside ? "" : " out"), style: "left:" + percentOf(row.value, low, high) + "%" }))),
+      td(chip(inside, inside ? "Inside band" : row.result === "above" ? "Above band" : "Below band")),
+      td(row.source === "baseline" ? "This car's baseline" : "General guide"));
+  });
+  const count = healthy.outside;
+  return wide(card("Against the healthy band", "The shaded span is the band; the tick is this car",
+    table(["Value", "Measured", "#This car", "#Healthy band", "Position", "Result", "Band from"], rows),
+    reading((count ? (count === 1 ? "1 value sits outside its band." : count + " values sit outside their bands.") : "Everything measured is inside its band.")
+      + (healthy.warm ? "" : " The engine is not warm yet, so coolant temperature is left out.")
+      + " General guides are rules of thumb for petrol engines, not the maker's figures.")));
+}
+
+function freezeCell(trim) {
+  const frame = lastCodes && lastCodes.freeze_frame;
+  if (!frame) return null;
+  const find = (key) => {
+    const found = frame.readings.find((item) => item.key === key);
+    return found ? found.value : null;
+  };
+  const rpm = find("02:0C");
+  const load = find("02:04");
+  if (rpm === null || load === null) return null;
+  const bin = (edges, value) => edges.findIndex((edge, i) => i < edges.length - 1 && value >= edge && value < edges[i + 1]);
+  const column = bin(trim.rpm_edges, rpm);
+  const row = bin(trim.load_edges, load);
+  return column < 0 || row < 0 ? null : { column, row: trim.load_edges.length - 2 - row, code: frame.dtc };
+}
+
+function trimCard(trim) {
+  if (!trim.available) return wide(lacking("Fuel trim by operating region", trim));
+  const mark = freezeCell(trim);
+  const loads = edgeLabels(trim.load_edges).reverse();
+  const cells = [el("div", { class: "cell edge" }), ...edgeLabels(trim.rpm_edges).map((label) =>
+    el("div", { class: "cell edge" }, label + " rpm"))];
+  let markEmpty = false;
+  trim.cells.forEach((row, r) => {
+    cells.push(el("div", { class: "cell edge" }, loads[r] + " % load"));
+    row.forEach((cell, c) => {
+      const marked = mark && mark.row === r && mark.column === c;
+      if (!cell) {
+        markEmpty = markEmpty || marked;
+        cells.push(el("div", { class: "cell empty" + (marked ? " mark" : "") }, marked ? mark.code + " set here" : "no data"));
+        return;
+      }
+      const hot = Math.abs(cell.mean) >= trim.limit;
+      const strength = Math.round(Math.min(40, 10 + Math.abs(cell.mean) / 25 * 30));
+      cells.push(el("div", {
+        class: "cell" + (marked ? " mark" : ""),
+        style: "background:color-mix(in srgb, var(" + (hot ? "--warning" : "--signal") + ") " + strength + "%, var(--surface-2))",
+      }, signed(cell.mean) + " %", el("small", null, fmtDuration(cell.seconds))));
+    });
+  });
+  let words = trim.beyond === trim.visited
+    ? "Correction is beyond ±" + trim.limit + " % in all " + trim.visited + " cells visited, at idle and under load alike. That points at something that affects the whole engine, such as air metering or fuel pressure."
+    : "Correction is beyond ±" + trim.limit + " % in " + trim.beyond + " of " + trim.visited + " cells visited.";
+  if (trim.beyond && trim.beyond < trim.visited) {
+    words += " Where it changes is the clue: at idle only suggests an air leak, under load only suggests fuel supply.";
+  }
+  if (markEmpty) words += " There are no samples yet from the cell where " + mark.code + " was set.";
+  return wide(card("Fuel trim by operating region", "Mean of short-term plus long-term trim, bank 1, and the time spent in each cell",
+    el("div", { class: "scroll" }, el("div", {
+      class: "map", style: "grid-template-columns:104px repeat(" + (trim.rpm_edges.length - 1) + ",minmax(0,1fr))",
+    }, cells)),
+    reading(words)));
+}
+
+function airCard(flow) {
+  if (!flow.available) return lacking("Air flow check", flow);
+  const [bandLow, bandHigh] = flow.band;
+  const series = flow.series;
+  const sx = scaler(series[0][0], series[series.length - 1][0], 240, 2);
+  const sy = scaler(Math.min(flow.low, bandLow) - 5, Math.max(flow.high, bandHigh) + 5, 60, 3, true);
+  const guide = (value) => stroke("p-guide", "M0 " + sy(value).toFixed(1) + " L240 " + sy(value).toFixed(1));
+  let words = "The mean, " + fmt(flow.mean) + " %, is inside the " + bandLow + " to " + bandHigh + " % guide.";
+  if (flow.mean < bandLow) {
+    words = "The mean, " + fmt(flow.mean) + " %, is below the " + bandLow + " to " + bandHigh + " % guide: the sensor reports less air than the engine should be moving.";
+  } else if (flow.mean > bandHigh) {
+    words = "The mean, " + fmt(flow.mean) + " %, is above the " + bandLow + " to " + bandHigh + " % guide. Check the engine size entered in Setup.";
+  }
+  return card("Air flow check", "Measured air against what " + fmt(flow.litres) + " L should draw",
+    el("div", { class: "value" }, el("span", { class: "num big" }, fmt(flow.now)), " ", el("span", { class: "unit" }, "% of displaced air, now")),
+    plot(64, 240, 60, "Measured air as a share of displaced air", guide(bandLow), guide(bandHigh), stroke("p-line", linePath(series, sx, sy))),
+    axis("low " + fmt(flow.low) + " %", "high " + fmt(flow.high) + " %"),
+    reading(words + " The guide is a rule of thumb, not the maker's figure."));
+}
+
+function warmCard(warm) {
+  if (!warm.available) return lacking("Warm-up", warm);
+  const all = warm.coolant.concat(warm.oil).map((point) => point[1]);
+  const low = Math.min(20, ...all);
+  const high = Math.max(100, ...all);
+  const sx = scaler(0, warm.seconds || 1, 300, 2);
+  const sy = scaler(low, high, 120, 4, true);
+  let words = "Coolant has not reached 80 °C yet.";
+  if (warm.began_warm) words = "The engine was already warm when this began.";
+  else if (warm.coolant_at_80 !== null) {
+    words = "Coolant reached 80 °C after " + fmtDuration(warm.coolant_at_80)
+      + (warm.oil_at_80 !== null ? ", oil after " + fmtDuration(warm.oil_at_80) : "") + ".";
+  }
+  return card("Warm-up", "Coolant (solid)" + (warm.oil.length ? " and oil (dashed)" : "") + ", with a line at 80 °C",
+    axis(fmt(high) + " °C", ""),
+    plot(120, 300, 120, "Coolant and oil temperature over time",
+      stroke("p-guide", "M0 " + sy(80).toFixed(1) + " L300 " + sy(80).toFixed(1)),
+      stroke("p-ref", linePath(warm.oil, sx, sy)), stroke("p-line", linePath(warm.coolant, sx, sy))),
+    axis(fmt(low) + " °C", fmtDuration(warm.seconds)),
+    reading(words));
+}
+
+function bandsCard(bands) {
+  if (!bands.available) return lacking("Where the engine has been", bands);
+  const labels = edgeLabels(bands.rpm_edges);
+  return card("Where the engine has been", "Share of time in each engine-speed band",
+    bands.share.map((share, i) => barRow(labels[i], share, fmt(share) + " %")),
+    bands.stationary === null ? null : reading("Stationary for " + fmt(bands.stationary) + " % of the time. A readiness monitor only runs once its own speed and load conditions have been met for long enough."));
+}
+
+function fuelCard(fuel) {
+  if (!fuel.available) return lacking("Fuel used, estimated", fuel);
+  const fact = (name, value) => [el("dt", null, name), el("dd", { class: "mono" }, value)];
+  return card("Fuel used, estimated", "From mass air flow at 14.7 : 1, petrol at 745 g/L",
+    el("dl", { class: "facts" },
+      fact("Fuel", fuel.litres.toFixed(3) + " L"), fact("Distance", fuel.km.toFixed(2) + " km"),
+      fact("Average", fuel.per_100_km === null ? "too short to say" : fmt(fuel.per_100_km) + " L/100 km"),
+      fact("Rate now", fuel.litres_per_hour === null ? "not known" : fmt(fuel.litres_per_hour) + " L/h")),
+    reading("If the air flow sensor under-reads, this estimate is low by the same share."));
+}
+
+function compareCard(figures) {
+  const rows = figures.compare.map((row) => el("tr", null,
+    td(row.name), td(row.unit), td(fmt(row.mean), "n"), td(fmt(row.other_mean), "n"), td(signed(row.change), "n"),
+    td(fmt(row.max), "n"), td(fmt(row.other_max), "n")));
+  return wide(card("Against recording " + figures.against, "Mean and peak of every value the two share",
+    table(["Value", "Unit", "#Mean", "#Mean, other", "#Change", "#Peak", "#Peak, other"], rows)));
+}
+
+/* ---- drive: gears, shifts, slip, pulling power ----------------------------------- */
+
+function renderDrive() {
+  const box = $("drive");
+  if (!report) {
+    box.replaceChildren();
+    return;
+  }
+  if (!report.passes) {
+    box.replaceChildren(el("p", { class: "secondary" }, "Nothing to show yet. Connect to the car, or pick a recording."));
+    return;
+  }
+  const drive = report.drive;
+  if (!drive.available) {
+    box.replaceChildren(el("div", { class: "grid" }, wide(lacking("Gear map", drive)), limitsCard()));
+    return;
+  }
+  const learned = drive.learned;
+  box.replaceChildren(el("div", { class: "grid" },
+    learned ? null : wide(card("Gears not learned yet", null, el("p", { class: "secondary" },
+      "The dots below are real, but there are no gear lines to judge them against. Learn the gears in Setup, step 5."))),
+    gearMapCard(drive), gearTimeCard(drive),
+    learned ? shiftsCard(drive) : null, learned && drive.shifts.length ? shiftDetailCard(drive) : null,
+    learned ? slipCard(drive) : null, pullCard(), limitsCard()));
+}
+
+function gearMapCard(drive) {
+  const fastest = Math.max(60, drive.top_speed * 1.05);
+  const highest = Math.max(3500, drive.top_rpm * 1.05);
+  const sx = scaler(0, fastest, 300, 3);
+  const sy = scaler(500, highest, 170, 3, true);
+  const lines = drive.gears.map((gear) =>
+    "M" + sx(500 / gear.ratio).toFixed(1) + " " + sy(500).toFixed(1)
+    + " L" + sx(Math.min(fastest, highest / gear.ratio)).toFixed(1) + " " + sy(Math.min(highest, fastest * gear.ratio)).toFixed(1)).join(" ");
+  const kind = (wanted) => dotPath(drive.points.filter((point) => point[2] === wanted), sx, sy);
+  const slipping = drive.points.filter((point) => point[2] === 1).length;
+  let words = "";
+  if (drive.learned) {
+    words = slipping
+      ? "Amber dots sit above their gear line: there the engine turns faster than the wheels account for, so the clutch is not holding."
+      : "Every dot that is in a gear sits on its line.";
+    words += " Grey dots are between gears: pulling away, shifting or coasting.";
+  }
+  return card("Gear map", "Engine speed against road speed" + (drive.learned ? "; dashed lines are the " + drive.gears.length + " gears learned" : ""),
+    axis(fmt(highest) + " rpm", ""),
+    plot(220, 300, 170, "Engine speed against road speed, with a line for each gear",
+      stroke("p-guide", lines), stroke("p-faint", kind(2)), stroke("p-dots", kind(0)), stroke("p-warn", kind(1))),
+    axis("500 rpm, 0 km/h", fmt(fastest) + " km/h"),
+    words ? reading(words) : null);
+}
+
+function gearTimeCard(drive) {
+  const total = drive.seconds || 1;
+  const sx = scaler(0, total, 400, 0);
+  const sy = scaler(500, Math.max(3500, drive.top_rpm * 1.05), 90, 3, true);
+  return card("Gear over time", "Engine speed, with the gear worked out from the ratio underneath",
+    plot(130, 400, 90, "Engine speed over time", stroke("p-line", linePath(drive.rpm, sx, sy))),
+    el("div", { class: "lane" }, drive.timeline.map((part) =>
+      el("span", { style: "left:" + (part.from / total * 100) + "%;width:" + ((part.to - part.from) / total * 100) + "%" }, part.gear))),
+    axis("0 s", fmtDuration(total)));
+}
+
+function openShift(drive) {
+  if (shiftOpen !== null && shiftOpen < drive.shifts.length) return shiftOpen;
+  const worst = drive.shifts.findIndex((shift) => shift.result !== "clean");
+  return worst < 0 ? 0 : worst;
+}
+
+function shiftsCard(drive) {
+  if (!drive.shifts.length) {
+    return wide(card("Shifts", null, el("p", { class: "secondary" }, "No shifts found in this drive yet.")));
+  }
+  const open = openShift(drive);
+  const faulty = drive.shifts.filter((shift) => shift.result !== "clean").length;
+  const brief = drive.shifts.length > 12 && !shiftsAll;
+  const rows = drive.shifts.map((shift, i) => (brief && shift.result === "clean" && i !== open ? null : el("tr", { class: i === open ? "sel" : null },
+    td(shift.from + " to " + shift.to), td(fmtDuration(shift.at), "n"), td(fmt(shift.rpm), "n"), td(fmt(shift.speed), "n"),
+    td(shift.effort === null ? "" : fmt(shift.effort) + " %", "n"), td(shift.took.toFixed(1) + " s", "n"),
+    td(shift.flare ? "+" + fmt(shift.flare) + " rpm" : "none", "n"),
+    td(chip(shift.result === "clean", capital(shift.result))),
+    td(el("button", {
+      class: "quiet slim", "aria-pressed": String(i === open),
+      onclick: () => {
+        shiftOpen = i;
+        renderDrive();
+      },
+    }, "Open")))));
+  return wide(card("Shifts", "Found where the ratio leaves one gear line and settles on another",
+    table(["Shift", "#At", "#Engine rpm", "#km/h", "#Effort", "#Took", "#Flare", "Result", "Detail"], rows),
+    drive.shifts.length > 12 ? el("div", { class: "toolbar" }, el("button", {
+      class: "quiet slim",
+      onclick: () => {
+        shiftsAll = !shiftsAll;
+        renderDrive();
+      },
+    }, shiftsAll ? "List only the shifts that were not clean" : "List all " + drive.shifts.length + " shifts")) : null,
+    reading(drive.shifts.length + " shifts, " + (faulty ? faulty + " of them not clean." : "all clean.")
+      + " Flare is how far engine speed rises above where an upshift began; a clean one only falls. Times are to the nearest update.")));
+}
+
+function shiftDetailCard(drive) {
+  const shift = drive.shifts[openShift(drive)];
+  const trace = shift.trace;
+  const all = trace.flatMap((point) => [point[1], point[2]]);
+  const low = Math.min(...all) - 100;
+  const high = Math.max(...all) + 100;
+  const sx = scaler(trace[0][0], trace[trace.length - 1][0], 300, 2);
+  const sy = scaler(low, high, 120, 3, true);
+  const fact = (name, value) => [el("dt", null, name), el("dd", { class: "mono" }, value)];
+  return card("Shift " + shift.from + " to " + shift.to + " at " + fmtDuration(shift.at),
+    "Engine speed (solid) against what a locked clutch would give (dashed)",
+    axis(fmt(high) + " rpm", ""),
+    plot(140, 300, 120, "Engine speed through this shift",
+      stroke("p-ref", linePath(trace, sx, sy, 2)), stroke("p-line", linePath(trace, sx, sy))),
+    axis(fmt(low) + " rpm", (trace[trace.length - 1][0] - trace[0][0]).toFixed(1) + " s shown"),
+    el("dl", { class: "facts" },
+      fact("Took", shift.took.toFixed(1) + " s"), fact("Flare", shift.flare ? "+" + fmt(shift.flare) + " rpm" : "none"),
+      fact("Result", capital(shift.result))));
+}
+
+function slipCard(drive) {
+  const flagged = drive.slip.filter((gear) => gear.mean !== null && gear.mean > 3).map((gear) => gear.gear);
+  let words = "No gear shows slip under load.";
+  if (flagged.length) {
+    const list = flagged.join(" and ");
+    const odd = flagged.every((gear) => gear % 2 === 1);
+    const even = flagged.every((gear) => gear % 2 === 0);
+    words = "Slip under load in gear " + list + ".";
+    if (report.transmission === "dual-clutch automatic" && (odd || even)) {
+      words += " In a dual-clutch gearbox the odd and even gears have a clutch each; this is the " + (odd ? "odd" : "even") + "-gear clutch, or its actuator.";
+    } else if (flagged.length === drive.slip.length) {
+      words += " Slip in every gear points at something the gears share.";
+    }
+  }
+  return card("Slip by gear", "Mean excess engine speed in gear at 40 % effort or more; the scale runs 0 to 10 %",
+    drive.slip.map((gear) => barRow("Gear " + gear.gear,
+      gear.mean === null ? 0 : percentOf(gear.mean, 0, 10), gear.mean === null ? "no data" : fmt(gear.mean) + " %",
+      gear.mean !== null && gear.mean > 3, gear.seconds ? fmtDuration(gear.seconds) + " under load" : "")),
+    reading(words + " Gears are numbered in the order they were learned, so a gear missed in setup shifts the numbers."));
+}
+
+function pullCard() {
+  const pull = report.pull;
+  if (!pull.available) return wide(lacking("Pulling power", pull));
+  const other = report.other_pull && report.other_pull.available ? report.other_pull.spans : null;
+  const total = pull.seconds || 1;
+  const sx = scaler(0, total, 400, 0);
+  const trace = (name, points, low, high) => (points.length ? el("div", { class: "trace" },
+    el("span", { class: "lbl" }, name),
+    plot(40, 400, 40, name + " over time", stroke("p-line", linePath(points, sx, scaler(low, high, 40, 3, true))))) : null);
+  const peak = (points) => Math.max(1, ...points.map((point) => point[1]));
+  const asked = pull.asked === "01:49" ? "Pedal" : pull.asked ? "Throttle" : null;
+  const rows = pull.spans.map((span, i) => {
+    const theirs = other ? other[i].seconds : null;
+    const slower = span.seconds !== null && theirs !== null && span.seconds - theirs > 0.5;
+    return el("tr", null,
+      td(span.from + " to " + span.to + " km/h"), td(span.seconds === null ? "not driven" : span.seconds.toFixed(1) + " s", "n"),
+      td(span.effort === null ? "" : fmt(span.effort) + " %", "n"),
+      other ? td(theirs === null ? "not driven" : theirs.toFixed(1) + " s", "n") : null,
+      other ? td(span.seconds === null || theirs === null ? "" : chip(!slower, slower ? "Slower by " + (span.seconds - theirs).toFixed(1) + " s" : "No slower")) : null);
+  });
+  return wide(card("Pulling power", "What was asked for, and what came of it, on one time axis",
+    trace(asked || "Effort", pull.asked_trace, 0, 100), trace("Engine load", pull.load_trace, 0, 100),
+    trace("Road speed", pull.speed_trace, 0, peak(pull.speed_trace)), trace("Ignition timing", pull.timing_trace, -10, Math.max(40, peak(pull.timing_trace))),
+    axis("0 s", fmtDuration(total)),
+    table(other ? ["Span", "#Quickest", "#Mean effort", "#Recording " + report.against, "Against it"] : ["Span", "#Quickest", "#Mean effort"], rows),
+    reading((asked ? "" : "This car offers neither pedal nor throttle position, so effort here is engine load. ")
+      + "Compare spans driven at similar effort. Pick a known-good recording under Against to see what has changed.")));
+}
+
+function limitsCard() {
+  return card("What this cannot see", "Limits of standard OBD-II",
+    el("ul", { class: "plain" },
+      el("li", null, "The car does not report its gear, clutch state or transmission temperature over standard requests. Everything here is worked out from engine speed and road speed."),
+      el("li", null, "The transmission module's own slip figures, clutch temperature and commanded gear need maker-specific requests, which cardiag does not send."),
+      el("li", null, "A shudder faster than about half the update rate will not show. A drive capture reads fewer values so that each is read more often."),
+      el("li", null, "Road speed arrives in whole km/h, so the ratio is coarse at low speed and first gear is the hardest to learn.")));
+}
+
+function drawCapture() {
+  $("capture").textContent = capture ? "Stop the drive capture" : "Start a drive capture";
+}
+
+async function toggleCapture() {
+  const note = $("capture-note");
+  if (!capture) {
+    const wanted = await api("/api/setup");
+    const values = await api("/api/values");
+    if (wanted.error || values.error) {
+      note.textContent = wanted.error || values.error;
+      return;
+    }
+    const watching = await api("/api/watch", { pids: wanted.drive_pids });
+    const started = watching.error ? watching : await api("/api/record", { action: "start", note: "drive capture" });
+    if (started.error) {
+      note.textContent = started.error;
+      return;
+    }
+    capture = { watched: values.watched, session: started.recording.session };
+    note.textContent = "Recording " + capture.session + ". Drive, then stop the capture to see it.";
+    showStatus(started);
+  } else {
+    const done = capture;
+    capture = null;
+    const stopped = await api("/api/record", { action: "stop" });
+    await api("/api/watch", { pids: done.watched });
+    note.textContent = stopped.error || "";
+    if (!stopped.error) showStatus(stopped);
+    await loadReportSources();
+    $("report-source").value = String(done.session);
+    await loadReport();
+  }
+  drawCapture();
+  loadChoices();
+}
+
+/* ---- setup ------------------------------------------------------------------------ */
+
+async function loadSetup() {
+  const epoch = reportEpoch;
+  const result = await api("/api/setup");
+  if (epoch !== reportEpoch) return;
+  const ready = !result.error && result.status.state === "connected";
+  $("setup-steps").hidden = !ready;
+  $("setup-empty").hidden = ready;
+  if (!ready) {
+    setup = null;
+    $("setup-empty").textContent = result.error || "Connect to the car to set it up. Setup is kept per car.";
+    return;
+  }
+  setup = result;
+  $("setup-litres").value = result.profile.engine_litres === null ? "" : String(result.profile.engine_litres);
+  fillSelect($("setup-transmission"), [["", "Transmission: not chosen"], ...result.transmissions.map((name) => [name, capital(name)])]);
+  $("setup-transmission").value = result.profile.transmission || "";
+  fillSelect($("setup-fuel"), result.fuels.map((name) => [name, capital(name)]));
+  $("setup-fuel").value = result.profile.fuel;
+  renderSetup();
+}
+
+function renderSetup() {
+  const status = setup.status;
+  const profile = setup.profile;
+  const fact = (name, value) => [el("dt", null, name), el("dd", null, value)];
+  $("setup-car").replaceChildren(el("dl", { class: "facts" },
+    fact("Adapter", status.adapter || "not known"), fact("Network", status.network || "not known"),
+    fact("VIN", status.vin || "not reported"), fact("Modules", status.modules.join(", "))));
+
+  $("setup-offers").replaceChildren(
+    ...setup.offered.flatMap((module) => [
+      el("h4", null, module.module + ": " + module.values.length + (module.values.length === 1 ? " value" : " values")),
+      el("div", { class: "offers" }, module.values.map((value) => el("div", null, el("span", null, value.pid), value.name))),
+    ]),
+    el("h4", null, "Values the Diagnosis and Drive tabs want"),
+    table(["Value", "PID", "This car", "Without it"], setup.wanted.map((row) => el("tr", null,
+      td(row.name), td(row.pids.join(", "), "mono"), td(chip(row.offered, row.offered ? "Offered" : "Not offered")),
+      td(row.offered ? "" : row.without, "wrap")))));
+
+  const baseline = profile.baseline;
+  if (!baseline) $("baseline-state").replaceChildren(el("p", { class: "secondary small" }, "No baseline yet."));
+  else {
+    const values = baseline.values;
+    const shown = [["Idle speed", values.idle_rpm, "rpm"], ["Manifold pressure", values.idle_map, "kPa"],
+      ["Mass air flow", values.idle_maf, "g/s"], ["Short-term trim", values.stft, "%"], ["Long-term trim", values.ltft, "%"],
+      ["Module voltage", values.module_volts, "V"]].filter((item) => item[1] !== undefined && item[1] !== null);
+    $("baseline-state").replaceChildren(
+      baseline.good ? statusLine("good", "Kept as known good, from " + fmtDuration(baseline.seconds) + " of idling")
+        : statusLine("warning", "Kept as the current state, not as known good"),
+      ...baseline.flags.map((flag) => el("p", { class: "secondary small" }, capital(flag) + ". Take the baseline again after the repair.")),
+      el("dl", { class: "facts" }, shown.map((item) => fact(item[0], fmt(item[1]) + " " + item[2]))));
+  }
+
+  $("gears-state").replaceChildren(profile.gears.length
+    ? table(["Gear", "#rpm per km/h", "#Held for"], profile.gears.map((gear, i) => el("tr", null,
+      td(String(i + 1)), td(fmt(gear.ratio), "n"), td(fmtDuration(gear.seconds), "n"))))
+    : el("p", { class: "secondary small" }, "No gears learned yet."));
+
+  const pedal = setup.wanted.some((row) => row.name === "Accelerator pedal position" && row.offered);
+  const line = (name, ok, state, why) => el("tr", null, td(name), td(chip(ok, state)), td(why, "wrap"));
+  $("setup-summary").replaceChildren(table(["View", "State", "Why"], [
+    line("Live, Codes, Readiness", true, "Ready", ""),
+    line("Healthy bands", Boolean(baseline && baseline.good), baseline && baseline.good ? "Uses this car's baseline" : "General guides only",
+      baseline ? (baseline.good ? "" : "The baseline was not kept as known good.") : "No baseline has been taken."),
+    line("Air flow check", profile.engine_litres !== null, profile.engine_litres !== null ? "Ready" : "Needs the engine size",
+      profile.engine_litres !== null ? "Uses the " + fmt(profile.engine_litres) + " L you entered." : "Step 3."),
+    line("Gear map and shifts", profile.gears.length > 0, profile.gears.length ? profile.gears.length + " gears learned" : "Gears not learned",
+      profile.gears.length ? "" : "Step 5."),
+    line("Pulling power", true, pedal ? "Uses pedal position" : "Throttle stands in", pedal ? "" : "This car does not offer pedal position."),
+  ]));
+}
+
+async function saveProfile() {
+  const result = await api("/api/setup/profile", {
+    engine_litres: $("setup-litres").value, transmission: $("setup-transmission").value || null, fuel: $("setup-fuel").value,
+  });
+  $("setup-profile-note").textContent = result.error || "Saved.";
+  if (result.error || !setup) return;
+  setup.profile = result;
+  renderSetup();
+}
+
+function startBaseline() {
+  if (baselineLeft) return;
+  baselineLeft = 60;
+  $("baseline-start").disabled = true;
+  tickBaseline();
+}
+
+function tickBaseline() {
+  if (baselineLeft > 0) {
+    $("baseline-note").textContent = "Keep idling: " + baselineLeft + " s to go";
+    baselineLeft -= 1;
+    setTimeout(tickBaseline, 1000);
+    return;
+  }
+  finishBaseline();
+}
+
+async function finishBaseline() {
+  $("baseline-note").textContent = "Saving…";
+  const result = await api("/api/setup/baseline", { known_good: $("baseline-good").checked });
+  $("baseline-start").disabled = false;
+  $("baseline-note").textContent = result.error ? capital(result.error) + "." : "";
+  if (result.error || !setup) return;
+  setup.profile = result;
+  renderSetup();
+}
+
+async function changeGears(request) {
+  const result = await api("/api/setup/gears", request);
+  $("gears-note").textContent = result.error ? capital(result.error) + "." : "";
+  if (result.error || !setup) return;
+  setup.profile = result;
+  renderSetup();
+}
+
+/* ---- settings: central server ------------------------------------------------------ */
+
+function showCentral(state) {
+  if (state.error) {
+    $("central-card").hidden = false;
+    $("central-state").replaceChildren(problem(capital(state.error)));
+    return;
+  }
+  $("central-card").hidden = !state.managed;
+  if (!state.managed) return;
+  const lines = [];
+  if (!state.url) lines.push(el("div", { class: "status" }, "Recordings stay on this box"));
+  else if (state.problem) lines.push(problem(capital(state.problem)));
+  else lines.push(statusLine("good", state.waiting ? "Sending to " + state.url : "Everything has been sent to " + state.url));
+  if (state.url && state.waiting) {
+    lines.push(el("p", { class: "secondary small" },
+      state.waiting + (state.waiting === 1 ? " recording is" : " recordings are") + " waiting to go"));
+  }
+  $("central-state").replaceChildren(...lines);
+  $("central-url").value = state.url || "";
+  $("central-send").hidden = !state.url;
+}
+
+async function loadCentral() {
+  showCentral(await api("/api/central"));
+}
+
+async function saveCentral() {
+  showCentral(await api("/api/central", { url: $("central-url").value }));
+}
+
+async function sendCentral() {
+  showCentral(await api("/api/central", { action: "send" }));
+}
+
 /* ---- wiring -------------------------------------------------------------- */
+
+let activeTab = "live";
+
+/* Fill the open tab if it is one whose content belongs to the connected car. */
+function loadCarTab() {
+  if (activeTab === "diagnosis" || activeTab === "drive") loadReportSources().then(loadReport);
+  if (activeTab === "setup") {
+    loadSetup();
+    loadReportSources();
+  }
+}
 
 function showTab(name) {
   for (const tab of TABS) {
     $("tab-" + tab).setAttribute("aria-selected", String(tab === name));
     $("panel-" + tab).hidden = tab !== name;
   }
+  activeTab = name;
+  $("report-bar").hidden = name !== "diagnosis" && name !== "drive";
+  loadCarTab();
   if (name === "sessions") loadSessions();
   if (name === "settings") {
     loadNetwork();
     loadUpdate();
+    loadCentral();
   }
 }
 
@@ -826,8 +1739,25 @@ $("wifi-save").addEventListener("click", saveNetwork);
 $("wifi-join").addEventListener("click", joinNetwork);
 $("wifi-hotspot").addEventListener("click", useHotspot);
 $("wifi-forget").addEventListener("click", () => changeNetwork({ action: "forget" }));
+$("uplink-save").addEventListener("click", saveUplink);
+$("uplink-join").addEventListener("click", joinUplink);
+$("uplink-forget").addEventListener("click", () => changeNetwork({ action: "forget", which: "uplink" }));
+$("central-save").addEventListener("click", saveCentral);
+$("central-send").addEventListener("click", sendCentral);
+$("report-refresh").addEventListener("click", loadReport);
+$("report-source").addEventListener("change", loadReport);
+$("report-against").addEventListener("change", loadReport);
+$("capture").addEventListener("click", toggleCapture);
+$("setup-save").addEventListener("click", saveProfile);
+$("baseline-start").addEventListener("click", startBaseline);
+$("gears-learn").addEventListener("click", () => changeGears({ source: $("gears-source").value || "live" }));
+$("gears-clear").addEventListener("click", () => changeGears({ action: "clear" }));
 $("update-check").addEventListener("click", checkForUpdate);
 $("update-install").addEventListener("click", installUpdate);
+
+// A link such as /#drive opens straight on that tab.
+const wantedTab = (location.hash || "").slice(1);
+if (TABS.includes(wantedTab)) showTab(wantedTab);
 
 const stream = new EventSource("/api/stream");  // reconnects by itself after a dropout
 stream.onmessage = (event) => {

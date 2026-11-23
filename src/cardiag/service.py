@@ -11,6 +11,7 @@ from __future__ import annotations
 import queue
 import threading
 import time
+from collections import deque
 from concurrent.futures import Future
 from typing import Any, Callable
 
@@ -30,6 +31,9 @@ DEFAULT_LIVE_PIDS = (0x0C, 0x0D, 0x05, 0x04, 0x11, 0x06, 0x07, 0x0B, 0x10, 0x0E,
 VOLTAGE_KEY = "adapter:voltage"
 
 _LINK_ERRORS = (AdapterError, LinkError, FrameError, serial.SerialException, OSError)
+
+# Passes kept in memory for the Diagnosis and Drive pages: about an hour at four a second.
+HISTORY_PASSES = 14400
 
 # After this many passes with no answer at all, the car is treated as switched off.
 _SILENT_PASSES_ALLOWED = 3
@@ -108,6 +112,10 @@ class Hub:
         self._vin: str | None = None
         self._modules: list[str] = []
         self._available: list[int] = []
+        self._offered: list[dict] = []  # per module: its name and the PIDs it offers
+        self._history: deque[tuple[float, dict[str, float]]] = deque(maxlen=HISTORY_PASSES)
+        self._signals: dict[str, dict] = {}  # name and unit of every value seen
+        self.on_recorded: Callable[[], None] | None = None  # called when a recording ends
         self._watch: list[int] | None = None  # None means the default set
         self._readings: list[Reading] = []
         self._elapsed = 0.0
@@ -158,6 +166,16 @@ class Hub:
                 ],
                 "watched": [f"{pid:02X}" for pid in self._watched()],
             }
+
+    def offered(self) -> list[dict]:
+        """Every standard value each module offers, whether or not it is being watched."""
+        with self._changed:
+            return [{"module": module["module"], "pids": list(module["pids"])} for module in self._offered]
+
+    def history(self) -> tuple[list[tuple[float, dict[str, float]]], dict[str, dict]]:
+        """The numeric values of every pass since this car connected, and what they are called."""
+        with self._changed:
+            return list(self._history), dict(self._signals)
 
     def set_watch(self, pids: list[str]) -> None:
         try:
@@ -253,6 +271,8 @@ class Hub:
             self._adapter = None  # with no vehicle, the adapter itself was still found
         self._network = self._vin = None
         self._modules, self._available, self._readings = [], [], []
+        self._offered = []
+        self._history.clear()
         self._version += 1
         self._changed.notify_all()
 
@@ -307,6 +327,11 @@ class Hub:
             self._vin = vin
             self._modules = [ecu_label(ecu, obd.protocol) for ecu in obd.ecus]
             self._available = sorted(pid for pid in offered if pid in PIDS)
+            self._offered = [
+                {"module": ecu_label(ecu, obd.protocol), "pids": sorted(pid for pid in pids if pid != 0x01)}
+                for ecu, pids in sorted(supported.items())
+            ]
+            self._history.clear()
             self._version += 1
             self._changed.notify_all()
 
@@ -357,6 +382,11 @@ class Hub:
                     return
                 self._readings = [reading for _, reading in samples]
                 self._elapsed = pass_started - started
+                self._history.append(
+                    (self._elapsed, {r.key: r.value for _, r in samples if not isinstance(r.value, str)})
+                )
+                for _, reading in samples:
+                    self._signals[reading.key] = {"name": reading.name, "unit": reading.unit}
                 self._version += 1
                 self._changed.notify_all()
 
@@ -400,3 +430,5 @@ class Hub:
             self._recording = None
             self._version += 1
             self._changed.notify_all()
+        if self.on_recorded:
+            self.on_recorded()
