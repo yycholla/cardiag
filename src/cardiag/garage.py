@@ -39,6 +39,64 @@ WANTED = [
 DRIVE_PIDS = (0x0C, 0x0D, 0x49, 0x11, 0x04, 0x0E)
 
 
+# Ways to record: (id, name, what it is for, standard values or None for the ones being watched,
+# maker-specific values or None for all of them). Fewer values means each is read more often.
+# Where two values are given together, the first the car offers is used.
+PRESETS = [
+    ("all", "Everything being watched", "The values chosen on the Live tab and every maker-specific value. The widest, and the slowest.", None, None),
+    ("shifts", "Shifts", "Engine speed, road speed, pedal, load and the two clutch-slip values, and nothing else. The fastest: use it to catch a bad shift.",
+     (0x0C, 0x0D, (0x49, 0x11), 0x04), (analysis.CLUTCH_A, analysis.CLUTCH_B)),
+    ("drive", "Drive", "What the Drive tab works from: the speeds, pedal, throttle, load and timing, with every maker-specific value.", DRIVE_PIDS, None),
+    ("fuel", "Fuelling", "Fuel trims, air flow, manifold pressure, timing and coolant against engine speed and load. For the bogged-down feeling.",
+     (0x0C, 0x0D, 0x04, 0x06, 0x07, 0x10, 0x0B, 0x0E, 0x05, (0x49, 0x11)), ()),
+]
+
+
+def _preset(hub: Hub, name: object) -> tuple[str, list[int] | None, list[str] | None]:
+    """A way to record, as its name and the values it reads on this car."""
+    found = next((preset for preset in PRESETS if preset[0] == (name or "all")), None)
+    if found is None:
+        raise ValueError("preset must be one of: " + ", ".join(preset[0] for preset in PRESETS))
+    _, title, _, pids, wanted = found
+    have = {pid for module in hub.offered() for pid in module["pids"]}
+    chosen = None
+    if pids is not None:
+        chosen = []
+        for pid in pids:
+            options = pid if isinstance(pid, tuple) else (pid,)
+            chosen += [option for option in options if option in have][:1]
+    keys = None if wanted is None else [value.key for value in hub.maker() if value.key in wanted]
+    return title, chosen, keys
+
+
+def presets(hub: Hub) -> dict:
+    """The ways to record, and what each would read on the car that is connected."""
+    listed = []
+    names = {value.key: value.name for value in hub.maker()}
+    for name, title, about, _, _ in PRESETS:
+        _, pids, keys = _preset(hub, name)
+        reads = None
+        if pids is not None:
+            reads = [PIDS[pid].name for pid in pids] + [names[key] for key in (names if keys is None else keys)]
+        listed.append({"id": name, "name": title, "about": about, "reads": reads})
+    return {"presets": listed}
+
+
+def record(hub: Hub, body: dict) -> dict:
+    """Start or stop a recording; a start may name a preset."""
+    action = body.get("action")
+    if action == "stop":
+        return hub.stop_recording()
+    if action != "start":
+        raise ValueError("action must be 'start' or 'stop'")
+    title, pids, keys = _preset(hub, body.get("preset"))
+    note = body.get("note")
+    if note is not None and not isinstance(note, str):
+        raise ValueError("note must be text")
+    preset = body.get("preset") or "all"
+    return hub.start_recording(note or (None if preset == "all" else title + " capture"), pids=pids, maker=keys, preset=preset)
+
+
 def setup_report(hub: Hub, db_path: str | None) -> dict:
     status = hub.status()
     offered = hub.offered()
@@ -291,29 +349,29 @@ def saved_interval(db_path: str | None) -> float | None:
 
 
 _GEARS_KEPT = 5.0  # seconds the learned gears are remembered between glances, to spare the disk
-_gears_seen: dict = {"vin": None, "path": None, "at": 0.0, "ratios": []}
+_gears_seen: dict = {"vin": None, "path": None, "at": 0.0, "gears": []}
 
 
-def _ratios(db_path: str | None, vin: str | None) -> list[float]:
-    """The gear ratios learned for this car, read at most once every few seconds."""
+def _gears(db_path: str | None, vin: str | None) -> list[dict]:
+    """The gears learned for this car, read at most once every few seconds."""
     seen = _gears_seen
     if seen["vin"] != vin or seen["path"] != db_path or time.monotonic() - seen["at"] > _GEARS_KEPT:
         store = Store(db_path)
         try:
-            ratios = [gear["ratio"] for gear in store.profile(vin)["gears"]]
+            gears = store.profile(vin)["gears"]
         finally:
             store.close()
-        seen.update(vin=vin, path=db_path, at=time.monotonic(), ratios=ratios)
-    return seen["ratios"]
+        seen.update(vin=vin, path=db_path, at=time.monotonic(), gears=gears)
+    return seen["gears"]
 
 
 def glance(hub: Hub, db_path: str | None) -> dict:
     """The latest values, with the gear and clutch slip worked out, for a display that shows a handful of numbers."""
     result = hub.glance()
-    ratios = _ratios(db_path, result["vin"]) if result["state"] == "connected" else []
+    gears = _gears(db_path, result["vin"]) if result["state"] == "connected" else []
     values = {r["key"]: r["value"] for r in result["readings"] if not isinstance(r["value"], str)}
-    gear, slip = analysis.gear_now(values, ratios)
-    result.update(gears_known=bool(ratios), gear=gear, slip=slip)
+    gear, slip = analysis.gear_now(values, gears)
+    result.update(gears_known=bool(gears), gear=gear, slip=slip)
     return result
 
 

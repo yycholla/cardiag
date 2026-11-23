@@ -72,6 +72,12 @@ class SimVehicle:
                 return [reply + args[:2] + ecu.extended[identifier](t)]
             # A module asked directly for something it does not have says so; one that merely overheard stays quiet.
             return [bytes([0x7F, 0x22, 0x31])] if addressed else []
+        if service == 0x01 and len(args) > 1:
+            # Several values in one request, which only CAN vehicles take. A module answers with the ones it has.
+            have = [pid for pid in args if pid % 0x20 and pid in ecu.live]
+            if self.legacy or not have:
+                return []
+            return [reply + b"".join(bytes([pid]) + ecu.live[pid](t) for pid in have)]
         if service == 0x01 and args:
             pid = args[0]
             if pid % 0x20 == 0:
@@ -252,19 +258,33 @@ def _dct_lap() -> list[tuple[float, float, float, float]]:
     return [state[:4] for state in _dct_states()]
 
 
+def _dct_clutch_slip(state: tuple, odd: bool) -> float:
+    """Slip of the clutch for the odd or the even gears: engine speed less the speed of that clutch's shaft."""
+    rpm, speed, gear, ready = state[0], state[1], state[4], state[6]
+    on_shaft = gear if (gear % 2 == 1) == odd else ready
+    if not on_shaft:
+        return rpm * 0.12  # between gears the shaft is dragged round a little slower than the engine
+    return rpm - speed * _DCT_RATIOS[on_shaft - 1]
+
+
 @functools.lru_cache(maxsize=1)
-def _dct_states() -> list[tuple[float, float, float, float, int, float]]:
-    """One lap of a drive in a geared car, every 0.05 s: (rpm, km/h, pedal %, load %, gear, slip rpm).
+def _dct_states() -> list[tuple[float, float, float, float, int, float, int]]:
+    """One lap of a drive in a geared car, every 0.05 s: (rpm, km/h, pedal %, load %, gear, slip rpm, gear held ready).
 
     Gear counts from 1. Slip is how much faster the engine turns than the gear in use accounts for.
+    The gear held ready is the one on the other shaft, waiting for the next shift; 0 while that
+    shaft is between gears.
 
-    The gearbox has two faults, both only under a heavy foot: the clutch slips in
-    third gear, and the shift from second to third is slow, with the engine
-    speeding up before the next gear takes hold.
+    The gearbox has three faults, all only under a heavy foot: the clutch slips in
+    third gear, the shift from second to third is slow, with the engine speeding up
+    before the next gear takes hold, and once in fourth the other shaft takes
+    seconds to find fifth.
     """
     table = []
     speed, gear, load = 0.0, 0, 20.0
     shift: dict | None = None
+    ready: int | None = 1  # the gear on the other shaft, or None while it is between gears
+    finding: dict | None = None  # the other shaft moving to a new gear: {"to", "left"}
     for step in range(round(_DCT_LAP / _DCT_STEP)):
         pedal, brake = _dct_pedal(step * _DCT_STEP)
         hard = pedal >= 40
@@ -278,7 +298,7 @@ def _dct_states() -> list[tuple[float, float, float, float, int, float]]:
                 rpm += 900 * math.sin(math.pi * shift["done"])
             accel = -0.3
             if shift["done"] >= 1:
-                gear, shift = shift["to"], None
+                ready, gear, shift = gear, shift["to"], None  # the shaft just left still holds its gear
         else:
             slipping = gear == 2 and hard
             rpm = locked * (1.07 if slipping else 1.0)
@@ -287,12 +307,21 @@ def _dct_states() -> list[tuple[float, float, float, float, int, float]]:
             rpm = max(780.0, rpm)
             pull = pedal / 100 * _DCT_RATIOS[gear] * 0.12 * (0.75 if slipping else 1.0)
             accel = pull - 0.003 * speed - (0.2 if speed > 0 else 0.0) - brake
-            if pedal > 0 and gear < 5 and rpm >= (2800 if hard else 1900):
+            # The other shaft gets the next gear ready: the one above while pulling, the one below otherwise.
+            wanted = gear + 1 if (pedal > 0 and gear < 5) or gear == 0 else gear - 1
+            if finding:
+                finding["left"] -= _DCT_STEP
+                if finding["left"] <= 0:
+                    ready, finding = finding["to"], None
+            elif ready != wanted:
+                ready, finding = None, {"to": wanted, "left": 2.5 if hard and gear == 3 else 0.3}
+            if pedal > 0 and gear < 5 and rpm >= (2800 if hard else 1900) and ready == gear + 1:
                 faulty = hard and gear == 1
                 shift = {"to": gear + 1, "rpm": rpm, "done": 0.0, "takes": 1.5 if faulty else 0.4, "flare": faulty}
-            elif gear > 0 and locked < 1000:
-                gear -= 1
-        table.append((rpm, speed, pedal, load, gear + 1, 0.0 if shift else max(0.0, rpm - speed * _DCT_RATIOS[gear])))
+            elif gear > 0 and locked < 1000 and ready == gear - 1:
+                ready, gear = gear, gear - 1
+        held = shift["to"] if shift else ready
+        table.append((rpm, speed, pedal, load, gear + 1, 0.0 if shift else max(0.0, rpm - speed * _DCT_RATIOS[gear]), 0 if held is None else held + 1))
         speed = max(0.0, speed + accel * _DCT_STEP)
     return table
 
@@ -307,12 +336,13 @@ def make_focus_dct() -> SimVehicle:
     vehicle = _focus("focus_dct", "1FADP3F2XHL654321", _dct_drive)
     vehicle.ecus[0].live[0x49] = lambda t: _percent(_dct_lap()[int((t % _DCT_LAP) / _DCT_STEP)][2])
 
-    def state(t: float) -> tuple[float, float, float, float, int, float]:
+    def state(t: float) -> tuple[float, float, float, float, int, float, int]:
         return _dct_states()[int((t % _DCT_LAP) / _DCT_STEP)]
 
     def slip(odd: bool) -> Callable[[float], bytes]:
-        # Quarter-rpm steps, signed. Each clutch reports slip only while one of its own gears is in use.
-        return lambda t: round(state(t)[5] * 4 if (state(t)[4] % 2 == 1) == odd else 0).to_bytes(2, "big", signed=True)
+        # Quarter-rpm steps, signed. Each clutch reports how much faster the engine turns than its own
+        # shaft, whether that shaft is driving or holding the next gear ready, as the real gearbox does.
+        return lambda t: round(_dct_clutch_slip(state(t), odd) * 4).to_bytes(2, "big", signed=True)
 
     # The transmission's own figures. The two slip identifiers are the ones an owners' forum gives
     # for this gearbox; the gear and temperature identifiers are invented, to give a scan more to find.

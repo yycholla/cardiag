@@ -241,10 +241,12 @@
   <main>
     <section id="panel-live">
       <div class="toolbar">
+        <select id="preset" aria-label="What to record"></select>
         <input id="note" type="text" maxlength="120" placeholder="Note for this recording (optional)" aria-label="Note for this recording">
         <button class="primary" id="record" disabled>Start recording</button>
         <span class="secondary small" id="record-status"></span>
       </div>
+      <p class="secondary small" id="preset-about"></p>
       <details id="chooser">
         <summary>Choose values</summary>
         <div class="choices" id="chooser-list"></div>
@@ -279,11 +281,13 @@
 
     <section id="panel-drive" hidden>
       <div class="card">
-        <div class="head"><h2>Drive capture</h2><span class="secondary small">Reads only the values shifting needs, so each is read more often</span></div>
+        <div class="head"><h2>Drive capture</h2><span class="secondary small">Records a few values, so each is read more often</span></div>
         <div class="toolbar">
+          <select id="capture-preset" aria-label="What the capture reads"></select>
           <button class="primary" id="capture" disabled>Start a drive capture</button>
           <span class="secondary small" id="capture-note"></span>
         </div>
+        <p class="secondary small" id="capture-about"></p>
       </div>
       <div id="drive"></div>
     </section>
@@ -582,8 +586,10 @@ function showStatus(status) {
   showInterval(status);
   showDiscovery(status.discovery);
   $("note").hidden = Boolean(recording);
+  $("preset").hidden = Boolean(recording);
+  const how = recording && presets.find((preset) => preset.id === recording.preset);
   $("record-status").textContent = recording
-    ? "Recording " + recording.session + " · " + fmtDuration(recording.seconds)
+    ? "Recording " + recording.session + " · " + fmtDuration(recording.seconds) + (how && how.id !== "all" ? " · " + how.name : "")
     : "";
 
   const source = status.simulation || "";
@@ -735,7 +741,7 @@ function showLive(payload) {
 
 async function toggleRecording() {
   const recording = current && current.recording;
-  const request = recording ? { action: "stop" } : { action: "start", note: $("note").value };
+  const request = recording ? { action: "stop" } : { action: "start", note: $("note").value, preset: $("preset").value || "all" };
   const result = await api("/api/record", request);
   if (result.error) {
     $("record-status").textContent = result.error;
@@ -745,9 +751,32 @@ async function toggleRecording() {
   showStatus(result);
 }
 
+let presets = [];  // the ways to record: {id, name, about, reads}
+
+/* What each way of recording reads on this car, for the two places a recording starts. */
+async function loadPresets() {
+  const result = await api("/api/presets");
+  if (result.error) return;
+  presets = result.presets;
+  const fill = (select, about, first) => {
+    const kept = select.value || first;
+    fillSelect(select, presets.map((preset) => [preset.id, preset.name]));
+    select.value = presets.some((preset) => preset.id === kept) ? kept : first;
+    const explain = () => {
+      const preset = presets.find((item) => item.id === select.value);
+      about.textContent = preset ? preset.about + (preset.reads ? " Reads: " + preset.reads.join(", ") + "." : "") : "";
+    };
+    select.onchange = explain;
+    explain();
+  };
+  fill($("preset"), $("preset-about"), "all");
+  fill($("capture-preset"), $("capture-about"), "shifts");
+}
+
 let choices = [];  // {pid, box}
 
 async function loadChoices() {
+  loadPresets();
   const values = await api("/api/values");
   if (values.error) return;
   const watched = new Set(values.watched);
@@ -1418,7 +1447,7 @@ function renderDrive() {
       "The dots below are real, but there are no gear lines to judge them against. Learn the gears in Setup, step 5."))),
     gearMapCard(drive), gearTimeCard(drive),
     learned ? shiftsCard(drive) : null, learned && drive.shifts.length ? shiftDetailCard(drive) : null,
-    learned ? slipCard(drive) : null, makerCard(), pullCard(), limitsCard()));
+    learned ? clutchCard(drive) : null, learned ? slipCard(drive) : null, makerCard(), pullCard(), limitsCard()));
 }
 
 function gearMapCard(drive) {
@@ -1474,6 +1503,8 @@ function shiftsCard(drive) {
     td(shift.from + " to " + shift.to), td(fmtDuration(shift.at), "n"), td(fmt(shift.rpm), "n"), td(fmt(shift.speed), "n"),
     td(shift.effort === null ? "" : fmt(shift.effort) + " %", "n"), td(shift.took.toFixed(1) + " s", "n"),
     td(shift.flare ? "+" + fmt(shift.flare) + " rpm" : "none", "n"),
+    drive.by_clutch ? td(shift.gap ? fmt(shift.gap) + " rpm" : "none", "n") : null,
+    drive.by_clutch ? td(fmt(shift.after) + " rpm", "n") : null,
     td(chip(shift.result === "clean", capital(shift.result))),
     td(el("button", {
       class: "quiet slim", "aria-pressed": String(i === open),
@@ -1483,7 +1514,9 @@ function shiftsCard(drive) {
       },
     }, "Open")))));
   return wide(card("Shifts", "Found where the ratio leaves one gear line and settles on another",
-    table(["Shift", "#At", "#Engine rpm", "#km/h", "#Effort", "#Took", "#Flare", "Result", "Detail"], rows),
+    table(drive.by_clutch
+      ? ["Shift", "#At", "#Engine rpm", "#km/h", "#Effort", "#Took", "#Flare", "#Neither holding", "#Slip after", "Result", "Detail"]
+      : ["Shift", "#At", "#Engine rpm", "#km/h", "#Effort", "#Took", "#Flare", "Result", "Detail"], rows),
     drive.shifts.length > 12 ? el("div", { class: "toolbar" }, el("button", {
       class: "quiet slim",
       onclick: () => {
@@ -1492,7 +1525,9 @@ function shiftsCard(drive) {
       },
     }, shiftsAll ? "List only the shifts that were not clean" : "List all " + drive.shifts.length + " shifts")) : null,
     reading(drive.shifts.length + " shifts, " + (faulty ? faulty + " of them not clean." : "all clean.")
-      + " Flare is how far engine speed rises above where an upshift began; a clean one only falls. Times are to the nearest update.")));
+      + " Flare is how far engine speed rises above where an upshift began; a clean one only falls. Times are to the nearest update."
+      + (drive.by_clutch ? " Neither holding is how much faster the engine turned than both shafts at once during the shift. Slip after is the most the new clutch slipped in the three seconds after it took over." : "")
+      + (drive.coarse ? " This drive was read " + fmt(drive.rate) + " times a second, which is too slow to judge a shift: one lasts a reading or two, and the values of a reading are taken moments apart. Record with Shifts to see them properly." : ""))));
 }
 
 function shiftDetailCard(drive) {
@@ -1510,9 +1545,55 @@ function shiftDetailCard(drive) {
     plot(140, 300, 120, "Engine speed through this shift",
       stroke("p-ref", linePath(trace, sx, sy, 2)), stroke("p-line", linePath(trace, sx, sy))),
     axis(fmt(low) + " rpm", (trace[trace.length - 1][0] - trace[0][0]).toFixed(1) + " s shown"),
+    trace[0].length > 3 ? clutchTrace(trace, sx) : null,
     el("dl", { class: "facts" },
       fact("Took", shift.took.toFixed(1) + " s"), fact("Flare", shift.flare ? "+" + fmt(shift.flare) + " rpm" : "none"),
+      drive.by_clutch ? fact("Neither holding", shift.gap ? fmt(shift.gap) + " rpm" : "none") : null,
+      drive.by_clutch ? fact("Slip after", fmt(shift.after) + " rpm") : null,
       fact("Result", capital(shift.result))));
+}
+
+/* The two clutches through one shift: the one letting go rises from zero as the other falls to it. */
+function clutchTrace(trace, sx) {
+  const points = trace.filter((point) => point[3] !== null && point[4] !== null && point[3] !== undefined);
+  if (points.length < 2) return null;
+  const all = points.flatMap((point) => [point[3], point[4]]);
+  const low = Math.min(0, ...all);
+  const high = Math.max(100, ...all);
+  const sy = scaler(low, high, 70, 3, true);
+  return el("div", null,
+    axis("Clutch slip, " + fmt(high) + " rpm", "A solid, B dashed"),
+    plot(80, 300, 70, "Slip of each clutch through this shift",
+      stroke("p-guide", "M0 " + sy(0).toFixed(1) + " L300 " + sy(0).toFixed(1)),
+      stroke("p-ref", linePath(points, sx, sy, 4)), stroke("p-line", linePath(points, sx, sy, 3))),
+    axis(fmt(low) + " rpm", ""));
+}
+
+/* What the gearbox itself reports about its two clutches. */
+function clutchCard(drive) {
+  const clutches = drive.clutches;
+  if (!clutches || !clutches.available) return null;
+  const rpm = (value) => (value === null ? "no data" : fmt(value) + " rpm");
+  const gears = clutches.by_gear.map((gear) => el("tr", null,
+    td(String(gear.gear)), td(gear.clutch), td(rpm(gear.light), "n"), td(rpm(gear.working), "n"), td(rpm(gear.peak), "n"),
+    td(gear.seconds ? fmtDuration(gear.seconds) : "", "n")));
+  const bands = clutches.by_rpm.map((band) => el("tr", null,
+    td(fmt(band.from) + " to " + fmt(band.to) + " rpm"), td(rpm(band.median), "n"), td(Math.round(band.over * 100) + " %", "n"), td(String(band.passes), "n")));
+  const slow = clutches.changes.filter((change) => change.slow);
+  const shown = (slow.length ? slow : clutches.changes).slice(0, 12).map((change) => el("tr", null,
+    td(fmtDuration(change.at), "n"), td(change.clutch), td(change.from + " to " + change.to), td(change.took.toFixed(1) + " s", "n"),
+    td(chip(!change.slow, change.slow ? "Slow" : "Quick"))));
+  return wide(card("Clutches", "From the gearbox's own slip figures: engine speed less the speed of each clutch's shaft",
+    table(["Gear", "Clutch", "#Slip, light load", "#Slip, 60 % load or more", "#Most", "#Time under load"], gears),
+    bands.length ? table(["Engine speed, at 60 % load or more", "#Typical slip", "#Readings over 50 rpm", "#Readings"], bands) : null,
+    el("h3", null, "Gear changes on each shaft"),
+    clutches.changes.length
+      ? table(["#At", "Clutch", "Gear", "#Took", "Result"], shown)
+      : el("p", { class: "secondary" }, "No change of gear was seen on either shaft."),
+    reading(clutches.changes.length + " changes of gear seen on the two shafts, " + (clutches.slow_changes ? clutches.slow_changes + " of them slow." : "none slow.")
+      + " Each shaft holds one of its own gears, in use or ready for the next shift; a slow change is a shaft that sat between gears, which is where a gear that will not go in would show."
+      + " A little slip under load at low engine speed can be deliberate, to smooth the drive; slip that stays at high engine speed is not."
+      + (drive.coarse ? " At " + fmt(drive.rate) + " readings a second the times here are rough." : ""))));
 }
 
 function slipCard(drive) {
@@ -1529,7 +1610,7 @@ function slipCard(drive) {
       words += " Slip in every gear points at something the gears share.";
     }
   }
-  return card("Slip by gear", "Mean excess engine speed in gear at 40 % effort or more; the scale runs 0 to 10 %",
+  return card("Slip by gear", "Mean excess engine speed in gear while the engine is pulling (60 % load or more, or 40 % pedal where load is not read); the scale runs 0 to 10 %",
     drive.slip.map((gear) => barRow("Gear " + gear.gear,
       gear.mean === null ? 0 : percentOf(gear.mean, 0, 10), gear.mean === null ? "no data" : fmt(gear.mean) + " %",
       gear.mean !== null && gear.mean > 3, gear.seconds ? fmtDuration(gear.seconds) + " under load" : "")),
@@ -1583,9 +1664,9 @@ function makerCard() {
 function limitsCard() {
   return card("What this cannot see", "Limits of standard OBD-II",
     el("ul", { class: "plain" },
-      el("li", null, "The car does not report its gear, clutch state or transmission temperature over standard requests. The gear map, shifts and slip above are worked out from engine speed and road speed."),
+      el("li", null, "The car does not report its gear, clutch state or transmission temperature over standard requests. Without the gearbox's own clutch figures, the gear map, shifts and slip above are worked out from engine speed and road speed."),
       el("li", null, "The transmission module's own slip figures, clutch temperature and commanded gear are maker-specific. Setup, step 6, can read them once their identifiers are found."),
-      el("li", null, "A shudder faster than about half the update rate will not show. A drive capture reads fewer values so that each is read more often."),
+      el("li", null, "A shudder faster than about half the update rate will not show. A drive capture reads fewer values so that each is read more often; Shifts is the fastest."),
       el("li", null, "Road speed arrives in whole km/h, so the ratio is coarse at low speed and first gear is the hardest to learn.")));
 }
 
@@ -1596,26 +1677,18 @@ function drawCapture() {
 async function toggleCapture() {
   const note = $("capture-note");
   if (!capture) {
-    const wanted = await api("/api/setup");
-    const values = await api("/api/values");
-    if (wanted.error || values.error) {
-      note.textContent = wanted.error || values.error;
-      return;
-    }
-    const watching = await api("/api/watch", { pids: wanted.drive_pids });
-    const started = watching.error ? watching : await api("/api/record", { action: "start", note: "drive capture" });
+    const started = await api("/api/record", { action: "start", preset: $("capture-preset").value || "shifts" });
     if (started.error) {
       note.textContent = started.error;
       return;
     }
-    capture = { watched: values.watched, session: started.recording.session };
+    capture = { session: started.recording.session };
     note.textContent = "Recording " + capture.session + ". Drive, then stop the capture to see it.";
     showStatus(started);
   } else {
     const done = capture;
     capture = null;
     const stopped = await api("/api/record", { action: "stop" });
-    await api("/api/watch", { pids: done.watched });
     note.textContent = stopped.error || "";
     if (!stopped.error) showStatus(stopped);
     await loadReportSources();
@@ -1682,8 +1755,9 @@ function renderSetup() {
   }
 
   $("gears-state").replaceChildren(profile.gears.length
-    ? table(["Gear", "#rpm per km/h", "#Held for"], profile.gears.map((gear, i) => el("tr", null,
-      td(String(i + 1)), td(fmt(gear.ratio), "n"), td(fmtDuration(gear.seconds), "n"))))
+    ? table(["Gear", "#rpm per km/h", "#Held for", "Clutch"], profile.gears.map((gear, i) => el("tr", null,
+      td(String(i + 1)), td((gear.rough ? "about " : "") + fmt(gear.ratio), "n"), td(gear.rough ? "moments" : fmtDuration(gear.seconds), "n"),
+      td(gear.clutch || ""))))
     : el("p", { class: "secondary small" }, "No gears learned yet."));
 
   const pedal = setup.wanted.some((row) => row.name === "Accelerator pedal position" && row.offered);

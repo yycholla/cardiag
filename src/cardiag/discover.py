@@ -49,7 +49,7 @@ class _Known:
         self._rows = []
         for t, values in context:
             rpm, speed = values.get(analysis.RPM), values.get(analysis.SPEED)
-            gear, _ = analysis._assign(values, ratios)
+            gear, _ = analysis._assign(values, gears)
             self._rows.append(
                 {
                     "gear": None if gear is None else gear + 1,

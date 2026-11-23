@@ -18,6 +18,7 @@ function feed(payload) {
 async function scenario() {
   const live = DATA.live;
   routes["/api/values"] = DATA.values;
+  routes["/api/presets"] = DATA.presets;
   routes["/api/codes"] = DATA.codes;
   routes["/api/monitors"] = DATA.monitors;
   routes["/api/sessions"] = DATA.sessions;
@@ -138,7 +139,7 @@ async function scenario() {
   };
   $("note").value = "cold start";
   await $("record").fire("click");
-  check(recordRequests[0].action === "start" && recordRequests[0].note === "cold start", "sends the note");
+  check(recordRequests[0].action === "start" && recordRequests[0].note === "cold start" && recordRequests[0].preset === "all", "sends the note and the way to record");
   check(text($("record")) === "Stop recording", "button turns into stop");
   check(text($("record-status")).startsWith("Recording 1 · "), "shows the running recording: " + text($("record-status")));
   check($("note").hidden === true && $("note").value === "", "hides and clears the note box");
@@ -386,22 +387,21 @@ async function scenario() {
   await $("report-refresh").fire("click");
   check(text($("report-note")) === "there is no recording 2" && text($("drive")) === "", "a failed report says why and shows nothing stale");
 
-  // A drive capture watches fewer values, records, then puts things back.
-  routes["/api/setup"] = DATA.setup;
-  const watchRequests = [];
-  routes["/api/watch"] = (options) => {
-    watchRequests.push(JSON.parse(options.body).pids);
-    return DATA.values;
-  };
+  // A drive capture records in the way picked, which reads fewer values.
+  check($("capture-preset").value === "shifts" && text($("capture-about")).startsWith("Engine speed, road speed, pedal"), "a capture reads for shifts unless told otherwise: " + text($("capture-about")));
+  check($("preset").value === "all" && text($("preset-about")).startsWith("The values chosen on the Live tab"), "an ordinary recording reads everything watched");
   routes["/api/analysis?source=1"] = DATA.analysis_live;
+  recordRequests.length = 0;
+  $("capture-preset").value = "fuel";
   await $("capture").fire("click");
-  check(JSON.stringify(watchRequests[0]) === JSON.stringify(DATA.setup.drive_pids), "watches only what shifting needs");
+  check(recordRequests[0].action === "start" && recordRequests[0].preset === "fuel", "asks for the way of recording that was picked");
   check(text($("capture")) === "Stop the drive capture" && text($("capture-note")).startsWith("Recording 1."), "capture is running: " + text($("capture-note")));
   $("report-against").value = "";
   await $("capture").fire("click");
   await settle();
-  check(JSON.stringify(watchRequests[1]) === JSON.stringify(DATA.values.watched), "puts the watched values back");
+  check(recordRequests[1].action === "stop", "stops the recording");
   check(text($("capture")) === "Start a drive capture" && $("report-source").value === "1", "and shows the recording it made");
+  routes["/api/setup"] = DATA.setup;
 
   // Setup.
   await $("tab-setup").fire("click");
