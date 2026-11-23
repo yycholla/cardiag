@@ -17,7 +17,8 @@ from pathlib import Path
 import pytest
 
 import cardiag
-from conftest import wait_for
+from cardiag.store import Store
+from conftest import as_recording, geared_passes, wait_for
 
 def _find_engine() -> str | None:
     """The first candidate that actually runs; a version-manager shim may exist but not work."""
@@ -60,6 +61,16 @@ def test_page_script_with_real_server_data(box, tmp_path):
     served.request("/api/record", {"action": "stop"})
     data["sessions"] = served.request("/api/sessions")[1]
 
+    data["setup"] = served.request("/api/setup")[1]
+    data["profile"] = served.request("/api/setup/profile", {"engine_litres": "2.0", "transmission": "dual-clutch automatic"})[1]
+    store = Store(served.db_path)
+    data["drive_id"] = store.import_session("elsewhere#1", as_recording(geared_passes(), vin=served.hub.status()["vin"]))
+    store.close()
+    data["sessions_after"] = served.request("/api/sessions")[1]
+    data["gears"] = served.request("/api/setup/gears", {"source": data["drive_id"]})[1]
+    data["analysis_live"] = served.request("/api/analysis")[1]
+    data["analysis_drive"] = served.request(f"/api/analysis?source={data['drive_id']}&against={data['drive_id']}")[1]
+
     data["simulating"] = served.request("/api/simulation", {"vehicle": "tahoe"})[1]
     wait_for(lambda: served.hub.status()["state"] == "connected")
     data["tahoe"] = served.stream_events(1)[0]
@@ -75,7 +86,9 @@ def test_page_script_with_real_server_data(box, tmp_path):
     data["network_joined"] = network()
     data["network_leaving"] = network({"action": "hotspot"})
     wait_for(lambda: network()["mode"] == "hotspot")
+    data["network_uplink"] = network({"action": "save", "which": "uplink", "ssid": "iPad", "password": "tablet-pass"})
 
+    data["central"] = served.request("/api/central")[1]
     data["update"] = served.request("/api/update")[1]
     box.github.publish("9.0.0", notes="Reads more codes.")
     data["update_found"] = served.request("/api/update", {"action": "check"})[1]

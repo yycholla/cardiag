@@ -8,6 +8,7 @@ values are invented; only the wire formats are meant to be faithful.
 
 from __future__ import annotations
 
+import functools
 import math
 import os
 import re
@@ -21,6 +22,7 @@ from typing import Callable
 from .dtc import encode_dtc
 
 Live = dict[int, Callable[[float], bytes]]
+Drive = Callable[[float], tuple[float, float, float, float]]
 
 
 @dataclass
@@ -145,34 +147,33 @@ def _drive(t: float) -> tuple[float, float, float, float]:
     return 2100 - 1300 * ramp, 70 * (1 - ramp), 10, 15
 
 
-def _engine_live(*, long_trim: float, mass_air_flow: bool) -> Live:
+def _engine_live(*, long_trim: float, mass_air_flow: bool, drive: Drive = _drive) -> Live:
     live: Live = {
         0x03: lambda t: b"\x02\x00",  # closed loop
-        0x04: lambda t: _percent(_drive(t)[3]),
+        0x04: lambda t: _percent(drive(t)[3]),
         0x05: lambda t: _temperature(min(92, 20 + t * 0.25)),
         0x06: lambda t: _trim(2.3 * math.sin(t / 3)),
         0x07: lambda t: _trim(long_trim),
-        0x0B: lambda t: _u8(30 + _drive(t)[3] * 0.6),
-        0x0C: lambda t: _u16(_drive(t)[0] * 4),
-        0x0D: lambda t: _u8(_drive(t)[1]),
+        0x0B: lambda t: _u8(30 + drive(t)[3] * 0.6),
+        0x0C: lambda t: _u16(drive(t)[0] * 4),
+        0x0D: lambda t: _u8(drive(t)[1]),
         0x0E: lambda t: _u8((12 + 64) * 2),
         0x0F: lambda t: _temperature(24),
-        0x11: lambda t: _percent(_drive(t)[2]),
+        0x11: lambda t: _percent(drive(t)[2]),
         0x1F: lambda t: _u16(t),
     }
     if mass_air_flow:
-        live[0x10] = lambda t: _u16(_drive(t)[0] / 200 * 100)
+        live[0x10] = lambda t: _u16(drive(t)[0] / 200 * 100)
     return live
 
 
-def make_focus() -> SimVehicle:
-    """A 2017-style Focus: CAN bus, engine and transmission modules, a lean-running fault."""
-    engine = _engine_live(long_trim=12.5, mass_air_flow=True)
+def _focus(name: str, vin: str, drive: Drive) -> SimVehicle:
+    engine = _engine_live(long_trim=12.5, mass_air_flow=True, drive=drive)
     engine.update(
         {
             # Check-engine light on with one code; evaporative monitor not yet complete.
             0x01: lambda t: bytes([0x81, 0x07, 0xE5, 0x04]),
-            0x23: lambda t: _u16(520 + _drive(t)[3] * 8),  # direct-injection rail pressure, x10 kPa
+            0x23: lambda t: _u16(520 + drive(t)[3] * 8),  # direct-injection rail pressure, x10 kPa
             0x2F: lambda t: _percent(62),
             0x31: lambda t: _u16(184),
             0x33: lambda t: _u8(99),
@@ -182,7 +183,7 @@ def make_focus() -> SimVehicle:
         }
     )
     return SimVehicle(
-        name="focus",
+        name=name,
         protocol="6",
         ecus=[
             SimEcu(
@@ -191,7 +192,7 @@ def make_focus() -> SimVehicle:
                 stored=("P0171",),
                 pending=("P0456",),
                 permanent=("P0171",),
-                vin="1FADP3F2XHL123456",
+                vin=vin,
                 freeze_dtc="P0171",
                 freeze={
                     0x04: _percent(41),
@@ -203,9 +204,90 @@ def make_focus() -> SimVehicle:
                     0x11: _percent(19),
                 },
             ),
-            SimEcu(address=0x7E9, live={0x0D: lambda t: _u8(_drive(t)[1])}, stored=("P0902",)),
+            SimEcu(address=0x7E9, live={0x0D: lambda t: _u8(drive(t)[1])}, stored=("P0902",)),
         ],
     )
+
+
+def make_focus() -> SimVehicle:
+    """A 2017-style Focus: CAN bus, engine and transmission modules, a lean-running fault."""
+    return _focus("focus", "1FADP3F2XHL123456", _drive)
+
+
+# Engine rpm per km/h in each gear of the simulated dual-clutch gearbox. Invented, not Ford's.
+_DCT_RATIOS = (120.0, 70.0, 48.0, 36.0, 29.0, 24.0)
+_DCT_STEP = 0.05
+_DCT_LAP = 150.0
+
+
+def _dct_pedal(t: float) -> tuple[float, float]:
+    """Accelerator (%) and braking (km/h per second) through one lap."""
+    if t < 4:
+        return 0.0, 0.0
+    if t < 60:
+        return 22.0, 0.0  # a gentle run up through the gears
+    if t < 76:
+        return 0.0, 4.5
+    if t < 120:
+        return 50.0, 0.0  # a hard run: this is where the faults show
+    if t < 133:
+        return 20.0, 0.0
+    return 0.0, 6.5
+
+
+@functools.lru_cache(maxsize=1)
+def _dct_lap() -> list[tuple[float, float, float, float]]:
+    """One lap of a drive in a geared car, as (rpm, km/h, pedal %, load %) every 0.05 s.
+
+    The gearbox has two faults, both only under a heavy foot: the clutch slips in
+    third gear, and the shift from second to third is slow, with the engine
+    speeding up before the next gear takes hold.
+    """
+    table = []
+    speed, gear, load = 0.0, 0, 20.0
+    shift: dict | None = None
+    for step in range(round(_DCT_LAP / _DCT_STEP)):
+        pedal, brake = _dct_pedal(step * _DCT_STEP)
+        hard = pedal >= 40
+        load += (18 + pedal * 0.9 - load) * 0.1
+        locked = speed * _DCT_RATIOS[gear]
+        if shift:
+            shift["done"] = min(1.0, shift["done"] + _DCT_STEP / shift["takes"])
+            target = speed * _DCT_RATIOS[shift["to"]]
+            rpm = shift["rpm"] + (target - shift["rpm"]) * shift["done"]
+            if shift["flare"]:
+                rpm += 900 * math.sin(math.pi * shift["done"])
+            accel = -0.3
+            if shift["done"] >= 1:
+                gear, shift = shift["to"], None
+        else:
+            slipping = gear == 2 and hard
+            rpm = locked * (1.07 if slipping else 1.0)
+            if gear == 0 and pedal > 0:
+                rpm = max(1100.0, rpm)  # pulling away: the clutch is still taking up
+            rpm = max(780.0, rpm)
+            pull = pedal / 100 * _DCT_RATIOS[gear] * 0.12 * (0.75 if slipping else 1.0)
+            accel = pull - 0.003 * speed - (0.2 if speed > 0 else 0.0) - brake
+            if pedal > 0 and gear < 5 and rpm >= (2800 if hard else 1900):
+                faulty = hard and gear == 1
+                shift = {"to": gear + 1, "rpm": rpm, "done": 0.0, "takes": 1.5 if faulty else 0.4, "flare": faulty}
+            elif gear > 0 and locked < 1000:
+                gear -= 1
+        table.append((rpm, speed, pedal, load))
+        speed = max(0.0, speed + accel * _DCT_STEP)
+    return table
+
+
+def _dct_drive(t: float) -> tuple[float, float, float, float]:
+    rpm, speed, pedal, load = _dct_lap()[int((t % _DCT_LAP) / _DCT_STEP)]
+    return rpm, speed, max(8.0, pedal), load
+
+
+def make_focus_dct() -> SimVehicle:
+    """The Focus again, driven through its gears, with a clutch that slips in third under load."""
+    vehicle = _focus("focus_dct", "1FADP3F2XHL654321", _dct_drive)
+    vehicle.ecus[0].live[0x49] = lambda t: _percent(_dct_lap()[int((t % _DCT_LAP) / _DCT_STEP)][2])
+    return vehicle
 
 
 def make_tahoe() -> SimVehicle:
@@ -235,7 +317,11 @@ def make_tahoe() -> SimVehicle:
     )
 
 
-VEHICLES: dict[str, Callable[[], SimVehicle]] = {"focus": make_focus, "tahoe": make_tahoe}
+VEHICLES: dict[str, Callable[[], SimVehicle]] = {
+    "focus": make_focus,
+    "focus_dct": make_focus_dct,
+    "tahoe": make_tahoe,
+}
 
 _ATDP_NAMES = {"2": "SAE J1850 VPW", "6": "ISO 15765-4 (CAN 11/500)"}
 _ACCEPTED_SETTINGS = re.compile(

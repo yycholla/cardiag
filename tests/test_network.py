@@ -70,7 +70,7 @@ class FakeNetworkManager:
 
 @pytest.fixture
 def wifi(nm):
-    wifi = Wifi(run=nm, settle=0.01, watch_interval=0.02)
+    wifi = Wifi(run=nm, settle=0.01, watch_interval=0.02, retry_after=60)
     yield wifi
     wifi.stop()
 
@@ -186,3 +186,76 @@ def test_colons_in_names_survive_nmcli_escaping():
     assert _split_terse(r"40::Cafe\: Free", 3) == ["40", "", "Cafe: Free"]
     assert _split_terse(r"GENERAL.CONNECTION:back\\slash", 2) == ["GENERAL.CONNECTION", "back\\slash"]
     assert _split_terse("IP4.ADDRESS[1]:10.42.0.1/24", 2) == ["IP4.ADDRESS[1]", "10.42.0.1/24"]
+
+
+# ---- the travelling hotspot: a phone or tablet that gives the box a way out ----
+
+
+def ups(nm) -> int:
+    return sum(1 for command in nm.commands if command[2:] == ["connection", "up", "cardiag-uplink"])
+
+
+def test_the_travelling_hotspot_is_joined_when_it_comes_into_range(wifi, nm):
+    wifi.save("iPad", "tablet-pass", "uplink")
+    assert nm.connections["cardiag-uplink"]["autoconnect"] == "no"  # NetworkManager must not fight the app over it
+    status = wifi.status()
+    assert status["uplink"] == "iPad" and status["saved"] is None and status["mode"] == "hotspot" and status["uplink_auto"]
+
+    wifi.start()
+    for _ in range(10):
+        wifi._stop.wait(0.02)
+    assert nm.active == "cardiag" and ups(nm) == 0  # not in range: nothing is tried
+
+    nm.in_range["iPad"] = ("70", "WPA2", "tablet-pass")
+    wait_for(lambda: nm.active == "cardiag-uplink")
+    assert settled(wifi)["mode"] == "uplink"
+
+    nm.active = None  # the tablet drove off, or its hotspot went to sleep
+    del nm.in_range["iPad"]
+    wait_for(lambda: nm.active == "cardiag")
+    nm.in_range["iPad"] = ("70", "WPA2", "tablet-pass")
+    wait_for(lambda: nm.active == "cardiag-uplink")  # and it is found again when it comes back
+
+
+def test_asking_for_the_own_hotspot_stops_the_wandering_until_asked_back(wifi, nm):
+    nm.in_range["iPad"] = ("70", "WPA2", "tablet-pass")
+    wifi.save("iPad", "tablet-pass", "uplink")
+    wifi.start()
+    wait_for(lambda: nm.active == "cardiag-uplink")
+
+    wifi.use_hotspot()
+    assert settled(wifi)["mode"] == "hotspot" and not wifi.status()["uplink_auto"]
+    tried = ups(nm)
+    for _ in range(10):
+        wifi._stop.wait(0.02)
+    assert nm.active == "cardiag" and ups(nm) == tried
+
+    wifi.join("uplink")
+    assert settled(wifi)["mode"] == "uplink" and wifi.status()["uplink_auto"]
+
+
+def test_a_refused_travelling_hotspot_is_left_alone_for_a_while(wifi, nm):
+    nm.in_range["iPad"] = ("70", "WPA2", "tablet-pass")
+    wifi.save("iPad", "wrong password", "uplink")
+    wifi.start()
+    wait_for(lambda: wifi.status()["problem"] is not None)
+    assert "Could not join iPad: the password was not accepted" in wifi.status()["problem"]
+    wait_for(lambda: nm.active == "cardiag")
+    for _ in range(10):
+        wifi._stop.wait(0.02)
+    assert ups(nm) == 1  # one refusal is not followed by a stream of them
+
+    wifi.save("iPad", "tablet-pass", "uplink")  # correcting the password clears the wait
+    wait_for(lambda: nm.active == "cardiag-uplink")
+
+
+def test_home_and_travelling_networks_are_kept_apart(wifi, nm):
+    wifi.save("Home", "correct horse")
+    wifi.save("iPad", "tablet-pass", "uplink")
+    status = wifi.status()
+    assert (status["saved"], status["uplink"]) == ("Home", "iPad")
+    wifi.forget("uplink")
+    status = wifi.status()
+    assert (status["saved"], status["uplink"]) == ("Home", None)
+    with pytest.raises(ValueError, match="'home' or 'uplink'"):
+        wifi.save("Other", "whatever-it-is", "office")

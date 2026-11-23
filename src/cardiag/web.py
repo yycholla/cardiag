@@ -14,20 +14,24 @@ import io
 import json
 import re
 import threading
+import zlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
-from . import __version__
+from . import __version__, garage
 from .elm import AdapterError
 from .frames import FrameError
 from .network import NetworkError, Wifi
 from .service import Hub, NotConnected
 from .store import Store
+from .sync import Uploader
 from .update import UpdateError, Updater
 
 _STATIC = Path(__file__).parent / "web"
 _KEEP_ALIVE_SECONDS = 10
+_MAX_BODY = 64 * 1024 * 1024  # a long recording, compressed, is a few megabytes
+_MAX_UNPACKED = 512 * 1024 * 1024
 
 
 class _Server(ThreadingHTTPServer):
@@ -36,6 +40,8 @@ class _Server(ThreadingHTTPServer):
     db_path: str | None
     wifi: Wifi | None
     updater: Updater | None
+    uploader: Uploader | None
+    accept_uploads: bool  # whether other boxes may send their recordings here
     restarting = False  # set when the server was stopped so that a new version can start
 
     def restart_soon(self) -> None:
@@ -81,6 +87,15 @@ class _Handler(BaseHTTPRequestHandler):
         elif path == "/api/update":
             updater = self.server.updater
             self._json(updater.status() if updater else {"managed": False, "current": __version__})
+        elif path == "/api/setup":
+            self._job(lambda: garage.setup_report(hub, self.server.db_path))
+        elif path == "/api/analysis":
+            query = parse_qs(urlsplit(self.path).query)
+            source, against = query.get("source", ["live"])[0], query.get("against", [""])[0]
+            self._job(lambda: garage.report(hub, self.server.db_path, source, against))
+        elif path == "/api/central":
+            uploader = self.server.uploader
+            self._json({"managed": True, **uploader.status()} if uploader else {"managed": False})
         else:
             self._json({"error": "not found"}, 404)
 
@@ -94,10 +109,20 @@ class _Handler(BaseHTTPRequestHandler):
             return
         try:
             length = int(self.headers.get("Content-Length") or 0)
-            body = json.loads(self.rfile.read(length) or b"{}")
+            if not 0 <= length <= _MAX_BODY:
+                self._json({"error": "the request body is too large"}, 413)
+                return
+            raw = self.rfile.read(length)
+            if self.headers.get("Content-Encoding", "").lower() == "gzip":
+                unpacker = zlib.decompressobj(wbits=31)
+                raw = unpacker.decompress(raw, _MAX_UNPACKED)
+                if unpacker.unconsumed_tail:
+                    self._json({"error": "the request body is too large"}, 413)
+                    return
+            body = json.loads(raw or b"{}")
             if not isinstance(body, dict):
                 raise ValueError
-        except ValueError:
+        except (ValueError, zlib.error):
             self._json({"error": "the request body must be a JSON object"}, 400)
             return
 
@@ -121,6 +146,18 @@ class _Handler(BaseHTTPRequestHandler):
             self._job(lambda: self._change_network(body))
         elif path == "/api/update":
             self._job(lambda: self._update(body.get("action")))
+        elif path == "/api/setup/profile":
+            self._job(lambda: garage.save_profile(hub, self.server.db_path, body))
+        elif path == "/api/setup/baseline":
+            self._job(lambda: garage.take_baseline(hub, self.server.db_path, body.get("known_good")))
+        elif path == "/api/setup/gears":
+            self._job(
+                lambda: garage.learn_gears(hub, self.server.db_path, body.get("source"), clear=body.get("action") == "clear")
+            )
+        elif path == "/api/central":
+            self._job(lambda: self._central(body))
+        elif path == "/api/ingest" and self.server.accept_uploads:
+            self._job(lambda: self._ingest(body))
         else:
             self._json({"error": "not found"}, 404)
 
@@ -134,14 +171,15 @@ class _Handler(BaseHTTPRequestHandler):
     def _change_network(self, body: dict) -> dict:
         wifi = self._wifi()
         action = body.get("action")
+        which = body.get("which", "home")
         if action == "save":
-            wifi.save(body.get("ssid"), body.get("password"))
+            wifi.save(body.get("ssid"), body.get("password"), which)
         elif action == "join":
-            wifi.join()
+            wifi.join(which)
         elif action == "hotspot":
             wifi.use_hotspot()
         elif action == "forget":
-            wifi.forget()
+            wifi.forget(which)
         else:
             raise ValueError("action must be 'save', 'join', 'hotspot' or 'forget'")
         return wifi.status()
@@ -157,6 +195,26 @@ class _Handler(BaseHTTPRequestHandler):
             self.server.restart_soon()
             return result
         raise ValueError("action must be 'check' or 'install'")
+
+    def _central(self, body: dict) -> dict:
+        uploader = self.server.uploader
+        if uploader is None:
+            raise ValueError("recordings are not sent on from this machine")
+        if body.get("action") == "send":
+            uploader.wake()
+            return {"managed": True, **uploader.status()}
+        return {"managed": True, **uploader.set_url(body.get("url"))}
+
+    def _ingest(self, body: dict) -> dict:
+        """Keep a recording that another box made."""
+        box, number = body.get("box"), body.get("id")
+        if not isinstance(box, str) or not 1 <= len(box) <= 64 or isinstance(number, bool) or not isinstance(number, int):
+            raise ValueError("a recording must say which box it came from and its number there")
+        store = Store(self.server.db_path)
+        try:
+            return {"stored": store.import_session(f"{box}#{number}", body)}
+        finally:
+            store.close()
 
     # ---- responses ----------------------------------------------------------
 
@@ -220,6 +278,8 @@ class _Handler(BaseHTTPRequestHandler):
                     "vin": row["vin"],
                     "note": row["note"],
                     "passes": row["cycles"],
+                    "origin": row["origin"],
+                    "sent": row["uploaded_at"] is not None,
                 }
                 for row in store.sessions()
             ]
@@ -252,10 +312,14 @@ def make_server(
     *,
     wifi: Wifi | None = None,
     updater: Updater | None = None,
+    uploader: Uploader | None = None,
+    accept_uploads: bool = False,
 ) -> _Server:
     server = _Server((host, port), _Handler)
     server.hub = hub
     server.db_path = db_path
     server.wifi = wifi
     server.updater = updater
+    server.uploader = uploader
+    server.accept_uploads = accept_uploads
     return server

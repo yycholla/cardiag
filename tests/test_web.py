@@ -113,7 +113,7 @@ def test_car_requests_fail_cleanly_when_nothing_is_connected(tmp_path):
 
 def test_switching_to_a_simulated_vehicle(served):
     status, body = served.request("/api/simulation", {"vehicle": "tahoe"})
-    assert status == 200 and body["simulation"] == "tahoe" and body["simulations"] == ["focus", "tahoe"]
+    assert status == 200 and body["simulation"] == "tahoe" and body["simulations"] == ["focus", "focus_dct", "tahoe"]
     wait_for(lambda: served.hub.status()["network"] == "SAE J1850 VPW")
     status, body = served.request("/api/simulation", {"vehicle": None})
     assert status == 200 and body["simulation"] is None
