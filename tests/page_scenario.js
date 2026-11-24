@@ -584,6 +584,81 @@ async function scenario() {
   await $("tab-live").fire("click");
   check($("report-bar").hidden === true, "the report bar goes away with its tabs");
 
+  // Configuration: the captured blocks and the settings in them. Changes are drafted, never sent.
+  routes["/api/config"] = DATA.config;
+  await $("tab-config").fire("click");
+  await settle();
+  check($("panel-config").hidden === false, "opens the Configuration tab");
+  check(text($("config-source")).includes("1 setting mapped in 62 blocks"), "counts the settings and blocks: " + text($("config-source")));
+  check(text($("config")).includes("Key-in-ignition beep") && text($("config")).includes("Seen on this car"), "shows the mapped setting");
+  check(text($("config-note")).startsWith("61 blocks have nothing mapped"), "says how many blocks are hidden: " + text($("config-note")));
+  const configButtons = () => $("config").descendants().filter((node) => node.tag === "button");
+  const setBit = configButtons().find((node) => text(node) === "Bit set (1)");
+  const clearBit = configButtons().find((node) => text(node) === "Bit clear (0)");
+  check(setBit && setBit.getAttribute("aria-pressed") === "true" && clearBit.getAttribute("aria-pressed") === "false", "the captured bit is set");
+  const before = calls.length;
+  await clearBit.fire("click");
+  check(text($("config-drafts")).includes("FF FF FF 3E") && text($("config-drafts")).includes("FF FF 7F 3E"), "drafts the block FORScan wrote: " + text($("config-drafts")));
+  check(text($("config")).includes("Draft, was Bit set"), "marks the drafted setting");
+  check(calls.length === before, "drafting sends nothing");
+  await $("config-drafts").descendants().find((node) => node.tag === "button").fire("click");
+  check(text($("config-drafts")) === "" && !text($("config")).includes("Draft, was"), "discards the drafts");
+  $("config-unmapped").checked = true;
+  await $("config-unmapped").fire("change");
+  check(text($("config")).includes("DE0B · block 12") && text($("config")).includes("Holds the VIN; withheld"), "shows the unmapped blocks too");
+  check(text($("config-note")) === "", "and no longer says any are hidden");
+  $("config-search").value = "beep";
+  await $("config-search").fire("input");
+  check($("config").children.length === 1 && text($("config")).startsWith("IPC"), "finds a setting by name");
+  $("config-search").value = "nothing like this";
+  await $("config-search").fire("input");
+  check(text($("config")).includes("Nothing matches"), "says when nothing matches");
+  $("config-search").value = "";
+  $("config-module").value = "GPSM";
+  await $("config-module").fire("change");
+  check($("config").children.length === 1 && text($("config")).startsWith("GPSM"), "shows one module");
+  sane($("config"), "the configuration");
+
+  // With a simulated car, made-up settings show every kind of control.
+  routes["/api/config"] = DATA.config_examples;
+  $("config-module").value = "EXAMPLE";
+  $("config-unmapped").checked = false;
+  await loadConfig();
+  const example = DATA.config_examples.modules.find((module) => module.name === "EXAMPLE");
+  const exampleBlock = example.blocks[0];
+  for (const setting of exampleBlock.settings) {
+    check(describeSetting(setting, rawOf(setting, bytesOf(exampleBlock.hex))) === setting.text, "page and server agree on " + setting.name);
+  }
+  check(text($("config")).includes("Made-up example"), "labels the examples");
+  const controls = $("config").descendants();
+  const select = controls.find((node) => node.tag === "select");
+  select.value = "12";
+  await select.fire("change");
+  check(text($("config-drafts")).includes("AC 0C 2A 02 58 01 7F"), "a choice changes its nibble: " + text($("config-drafts")));
+  let number = $("config").descendants().find((node) => node.tag === "input" && node.getAttribute("type") === "number" && node.getAttribute("aria-label") === "Fuel tank size");
+  number.value = "45.5";
+  await number.fire("change");
+  check(text($("config-drafts")).includes("AC 0C 2A 01 C7 01 7F"), "a number spans two bytes: " + text($("config-drafts")));
+  const box = $("config").descendants().find((node) => node.tag === "label" && text(node) === "High beams").children[0];
+  box.checked = true;
+  await box.fire("change");
+  check(text($("config-drafts")).includes("AC 2C 2A 01 C7 01 7F"), "a flag sets one bit");
+  const hexInput = $("config").descendants().find((node) => node.getAttribute("aria-label") === "Unsplit bytes");
+  hexInput.value = "zz";
+  await hexInput.fire("change");
+  check(text($("config-drafts")).includes("AC 2C 2A 01 C7 01 7F"), "bad hex is ignored");
+  hexInput.value = "beef";
+  await hexInput.fire("change");
+  check(text($("config-drafts")).includes("AC 2C 2A 01 C7 BE EF"), "hex replaces its bytes");
+  number = $("config").descendants().find((node) => node.getAttribute("aria-label") === "Courtesy lamp fade");
+  number.value = "999";
+  await number.fire("change");
+  check(text($("config-drafts")).includes("AC 2C FF 01 C7 BE EF"), "a number is held to what its bits can hold");
+  sane($("config"), "the examples");
+  sane($("config-drafts"), "the drafts");
+  $("config-module").value = "";
+  await $("tab-live").fire("click");
+
   // A value that stops arriving keeps its tile briefly, then goes.
   const without = Object.assign({}, live[0], { readings: live[0].readings.slice(1) });
   feed(without);

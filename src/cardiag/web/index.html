@@ -215,6 +215,39 @@
   .rows .figure { font: 13px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .rows .state { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
   .session { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+
+  /* Configuration: one row per setting, then the blocks the settings live in. */
+  .setting { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.4fr); gap: 6px 16px; padding: 10px 0; border-top: 1px solid var(--hairline); }
+  .setting:first-of-type { border-top: 0; }
+  .setting .what { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .setting .what b { font-weight: 600; }
+  .setting .where { color: var(--ink-3); font: 11px var(--mono); }
+  .setting .why { grid-column: 1 / -1; color: var(--ink-2); font-size: 12px; }
+  .setting .control { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+  .setting .control select, .setting .control input[type="number"], .setting .control input[type="text"] {
+    min-height: 40px; padding: 0 10px; border: 1px solid var(--border); border-radius: 4px;
+    background: var(--surface); color: var(--ink); font: inherit;
+  }
+  .setting .control input[type="number"] { width: 140px; font-family: var(--mono); }
+  .setting .control input[type="text"] { width: 160px; font-family: var(--mono); text-transform: uppercase; }
+  .setting .control .choices { flex: 1 1 100%; }
+  .setting.draft { box-shadow: inset 3px 0 0 var(--warning); padding-left: 10px; }
+  .segmented { display: inline-flex; }
+  .segmented button { border-radius: 0; }
+  .segmented button:first-child { border-radius: 4px 0 0 4px; }
+  .segmented button:last-child { border-radius: 0 4px 4px 0; margin-left: -1px; }
+  .segmented button[aria-pressed="true"] { background: var(--signal-fill); color: var(--ink); position: relative; }
+  @media (max-width: 640px) { .setting { grid-template-columns: 1fr; } }
+  .block { padding: 8px 0; border-top: 1px solid var(--hairline); }
+  .block .head { margin-bottom: 4px; }
+  .bytes { display: flex; flex-wrap: wrap; gap: 4px 2px; font: 13px var(--mono); }
+  .bytes span { padding: 2px 6px; border-bottom: 2px solid transparent; border-radius: 2px 2px 0 0; }
+  .bytes .mapped { border-bottom-color: var(--signal); }
+  .bytes .changed { background: var(--warning-fill); color: var(--warning); font-weight: 600; }
+  .bits td { padding: 4px 8px; font: 12px var(--mono); text-align: center; }
+  .bits td:first-child, .bits td:nth-child(2) { text-align: left; color: var(--ink-3); }
+  .bits td.mapped { background: var(--signal-fill); color: var(--ink); font-weight: 600; }
+  .bits td.changed { background: var(--warning-fill); color: var(--warning); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -235,6 +268,7 @@
     <button role="tab" id="tab-drive" aria-selected="false">Drive</button>
     <button role="tab" id="tab-sessions" aria-selected="false">Recordings</button>
     <button role="tab" id="tab-setup" aria-selected="false">Setup</button>
+    <button role="tab" id="tab-config" aria-selected="false">Configuration</button>
     <button role="tab" id="tab-settings" aria-selected="false">Settings</button>
   </nav>
 
@@ -391,6 +425,21 @@
       <div id="sessions"></div>
     </section>
 
+    <section id="panel-config" hidden>
+      <div class="card">
+        <div class="head"><h2>Configuration</h2><span class="secondary small" id="config-source"></span></div>
+        <p class="secondary small">Settings kept in the car's modules, decoded from their configuration blocks. Changing a value here only drafts it: the page shows the block it would make, and nothing is sent to the car.</p>
+        <div class="toolbar">
+          <select id="config-module" aria-label="Module"></select>
+          <input id="config-search" type="search" autocapitalize="off" autocomplete="off" placeholder="Find a setting, module or identifier" aria-label="Find a setting">
+        </div>
+        <label class="choice"><input type="checkbox" id="config-unmapped"> Show blocks with nothing mapped yet</label>
+        <p class="secondary small" id="config-note"></p>
+      </div>
+      <div id="config-drafts"></div>
+      <div id="config"></div>
+    </section>
+
     <section id="panel-settings" hidden>
       <div class="card">
         <h2>Data source</h2>
@@ -490,7 +539,7 @@ const SPARK_H = 32;
 const SPARK_PLOT_W = 96;   // leaves room at the right edge for the latest-point dot
 const SPARK_PAD = 5;
 const GLYPH = { good: "✓", warning: "!", critical: "✕" };
-const TABS = ["live", "codes", "readiness", "diagnosis", "drive", "sessions", "setup", "settings"];
+const TABS = ["live", "codes", "readiness", "diagnosis", "drive", "sessions", "setup", "config", "settings"];
 const VEHICLE_NAMES = { focus: "Ford Focus", focus_dct: "Ford Focus with a slipping clutch", tahoe: "Chevrolet Tahoe" };
 const NETWORK_POLL_MS = 3000;
 const KINDS = [["stored", "Stored"], ["pending", "Pending"], ["permanent", "Permanent"]];
@@ -2099,11 +2148,297 @@ async function sendCentral() {
 
 /* ---- wiring -------------------------------------------------------------- */
 
+/* ---- configuration ---------------------------------------------------- */
+
+let config = null;           // the blocks and their settings, from the server
+const drafts = new Map();    // "IPC DE11" -> the block's bytes with drafted changes, while they differ
+const STATUS_WORDS = { observed: [true, "Seen on this car"], reported: [false, "Reported, not tried"], example: [false, "Made-up example"] };
+
+const blockKey = (module, block) => module.name + " " + block.did;
+const bytesOf = (hex) => (hex.match(/../g) || []).map((pair) => parseInt(pair, 16));
+const hexByte = (value) => value.toString(16).toUpperCase().padStart(2, "0");
+const hexOf = (bytes) => bytes.map(hexByte).join(" ");
+
+/* A setting's bits within its span of the block, big-endian. BigInt keeps 32-bit operators from wrapping. */
+function maskShift(setting) {
+  let shift = 0;
+  while (Math.floor(setting.mask / 2 ** shift) % 2 === 0) shift++;
+  return shift;
+}
+
+function rawOf(setting, bytes) {
+  let span = 0n;
+  for (const value of bytes.slice(setting.byte, setting.byte + setting.size)) span = span * 256n + BigInt(value);
+  return Number((span & BigInt(setting.mask)) >> BigInt(maskShift(setting)));
+}
+
+function withRaw(setting, bytes, raw) {
+  let span = 0n;
+  for (const value of bytes.slice(setting.byte, setting.byte + setting.size)) span = span * 256n + BigInt(value);
+  const mask = BigInt(setting.mask);
+  span = (span & ~mask) | ((BigInt(raw) << BigInt(maskShift(setting))) & mask);
+  const out = bytes.slice();
+  for (let i = setting.size - 1; i >= 0; i--) {
+    out[setting.byte + i] = Number(span & 255n);
+    span >>= 8n;
+  }
+  return out;
+}
+
+function fullRaw(setting) {
+  return Math.floor(setting.mask / 2 ** maskShift(setting));
+}
+
+/* The raw value in words; matches what the server says for the captured value. */
+function describeSetting(setting, raw) {
+  if (setting.kind === "toggle") {
+    const on = raw === fullRaw(setting);
+    if (setting.states && (on || raw === 0)) return setting.states[on ? 0 : 1];
+    const word = fullRaw(setting) === 1 ? "Bit" : "Bits";
+    return on ? word + " set" : raw === 0 ? word + " clear" : "Mixed (" + raw.toString(16).toUpperCase() + ")";
+  }
+  if (setting.kind === "choice") {
+    const option = setting.options.find((each) => each.value === raw);
+    return option ? option.label : "Unlisted value " + raw.toString(16).toUpperCase();
+  }
+  if (setting.kind === "number") return (numberOf(setting, raw) + " " + setting.unit).trim();
+  if (setting.kind === "flags") {
+    const named = setting.bits.filter((each) => raw & each.bit).map((each) => each.label);
+    return named.length ? named.join(", ") : "None";
+  }
+  return raw.toString(16).toUpperCase().padStart(setting.size * 2, "0");
+}
+
+function numberOf(setting, raw) {
+  return Number((raw * setting.scale + setting.offset).toPrecision(6));
+}
+
+function blockBytes(module, block) {
+  return drafts.get(blockKey(module, block)) || bytesOf(block.hex);
+}
+
+function setDraft(module, block, bytes) {
+  const key = blockKey(module, block);
+  if (hexOf(bytes) === hexOf(bytesOf(block.hex))) drafts.delete(key);
+  else drafts.set(key, bytes);
+  renderConfig();
+}
+
+function draftSetting(module, block, setting, raw) {
+  setDraft(module, block, withRaw(setting, blockBytes(module, block), raw));
+}
+
+/* The control for one setting, by kind. Each one drafts a new raw value. */
+function settingControl(module, block, setting, raw) {
+  const change = (value) => draftSetting(module, block, setting, value);
+  const name = setting.name;
+  if (setting.kind === "toggle") {
+    const full = fullRaw(setting);
+    const labels = setting.states || (full === 1 ? ["Bit set (1)", "Bit clear (0)"] : ["Bits set", "Bits clear"]);
+    return el("div", { class: "segmented", role: "group", "aria-label": name },
+      el("button", { class: "quiet slim", "aria-pressed": String(raw === full), onclick: () => change(full) }, labels[0]),
+      el("button", { class: "quiet slim", "aria-pressed": String(raw === 0), onclick: () => change(0) }, labels[1]));
+  }
+  if (setting.kind === "choice") {
+    const options = setting.options.map((each) => [String(each.value), each.label + " (" + each.value.toString(16).toUpperCase() + ")"]);
+    if (!setting.options.some((each) => each.value === raw)) options.unshift([String(raw), describeSetting(setting, raw)]);
+    const select = el("select", { "aria-label": name, onchange: (event) => change(Number(event.currentTarget.value)) },
+      options.map(([value, label]) => el("option", { value }, label)));
+    select.value = String(raw);
+    return select;
+  }
+  if (setting.kind === "number") {
+    const low = numberOf(setting, 0);
+    const high = numberOf(setting, fullRaw(setting));
+    const input = el("input", {
+      type: "number", "aria-label": name, step: setting.scale, min: Math.min(low, high), max: Math.max(low, high),
+      onchange: (event) => {
+        const wanted = Math.round((Number(event.currentTarget.value) - setting.offset) / setting.scale);
+        if (Number.isFinite(wanted)) change(Math.max(0, Math.min(fullRaw(setting), wanted)));
+        else renderConfig();
+      },
+    });
+    input.value = String(numberOf(setting, raw));
+    return [input, setting.unit ? el("span", { class: "unit" }, setting.unit) : null,
+      el("span", { class: "caption" }, "raw " + raw.toString(16).toUpperCase())];
+  }
+  if (setting.kind === "flags") {
+    const named = setting.bits.reduce((sum, each) => sum + each.bit, 0);
+    const other = raw - (raw & named);
+    return el("div", { class: "choices" },
+      setting.bits.map((each) => {
+        const box = el("input", { type: "checkbox", onchange: (event) => change(event.currentTarget.checked ? raw | each.bit : raw & ~each.bit) });
+        box.checked = Boolean(raw & each.bit);
+        return el("label", { class: "choice" }, box, each.label);
+      }),
+      other ? el("span", { class: "caption" }, "Unnamed bits set: " + other.toString(16).toUpperCase()) : null);
+  }
+  const digits = setting.size * 2;
+  const input = el("input", {
+    type: "text", "aria-label": name, maxlength: digits, autocapitalize: "characters", autocomplete: "off",
+    onchange: (event) => {
+      const text = event.currentTarget.value.trim();
+      if (/^[0-9a-f]+$/i.test(text) && parseInt(text, 16) <= fullRaw(setting)) change(parseInt(text, 16));
+      else renderConfig();
+    },
+  });
+  input.value = describeSetting(setting, raw);
+  return input;
+}
+
+function settingRow(module, block, setting) {
+  const raw = rawOf(setting, blockBytes(module, block));
+  const was = rawOf(setting, bytesOf(block.hex));
+  const [ok, word] = STATUS_WORDS[setting.status] || [false, setting.status];
+  const where = module.request + " · " + block.did + " · byte " + (setting.byte + 1)
+    + (setting.size > 1 ? "–" + (setting.byte + setting.size) : "")
+    + " · mask " + setting.mask.toString(16).toUpperCase().padStart(setting.size * 2, "0");
+  return el("div", { class: "setting" + (raw !== was ? " draft" : "") },
+    el("div", { class: "what" },
+      el("b", null, setting.name),
+      el("span", { class: "small" }, describeSetting(setting, raw)),
+      el("span", { class: "where" }, where),
+      el("span", null, chip(ok, word), raw !== was ? chip(false, "Draft, was " + describeSetting(setting, was)) : null)),
+    el("div", { class: "control" }, settingControl(module, block, setting, raw)),
+    setting.evidence || setting.unknown ? el("div", { class: "why" },
+      setting.evidence, setting.unknown ? " Not known: " + setting.unknown : null) : null);
+}
+
+/* Which bits of a block belong to a setting: one entry per byte, a mask and the names. */
+function mappedBits(block) {
+  const bits = bytesOf(block.hex || "").map(() => ({ mask: 0, names: [] }));
+  for (const setting of block.settings) {
+    for (let i = 0; i < setting.size; i++) {
+      const mask = Math.floor(setting.mask / 256 ** (setting.size - 1 - i)) % 256;
+      const slot = bits[setting.byte + i];
+      if (slot && mask) {
+        slot.mask |= mask;
+        slot.names.push(setting.name);
+      }
+    }
+  }
+  return bits;
+}
+
+function blockView(module, block) {
+  const title = block.did + " · block " + block.block;
+  if (block.withheld) return el("div", { class: "block" },
+    el("div", { class: "head" }, el("span", { class: "mono" }, title), el("span", { class: "secondary small" }, "Holds the VIN; withheld")));
+  const captured = bytesOf(block.hex);
+  const now = blockBytes(module, block);
+  const bits = mappedBits(block);
+  const changed = (i) => now[i] !== captured[i];
+  const row = (i) => el("tr", null,
+    td(String(i + 1)), td(hexByte(now[i])),
+    [7, 6, 5, 4, 3, 2, 1, 0].map((bit) => {
+      const mask = 1 << bit;
+      const kind = (now[i] ^ captured[i]) & mask ? "changed" : bits[i].mask & mask ? "mapped" : null;
+      return el("td", { class: kind, title: bits[i].mask & mask ? bits[i].names.join(", ") : null }, (now[i] & mask) ? "1" : "0");
+    }));
+  const draft = drafts.has(blockKey(module, block));
+  return el("div", { class: "block" },
+    el("div", { class: "head" },
+      el("span", { class: "mono" }, title),
+      el("span", { class: "secondary small" }, captured.length + (captured.length === 1 ? " byte" : " bytes") + " · "
+        + (block.settings.length ? block.settings.length + (block.settings.length === 1 ? " setting" : " settings") : "nothing mapped"))),
+    el("div", { class: "bytes" }, now.map((value, i) =>
+      el("span", { class: changed(i) ? "changed" : bits[i].mask ? "mapped" : null }, hexByte(value)))),
+    draft ? el("div", { class: "toolbar" },
+      el("span", { class: "secondary small mono" }, "captured " + hexOf(captured)),
+      el("button", { class: "quiet slim", onclick: () => setDraft(module, block, captured) }, "Discard draft")) : null,
+    el("details", null, el("summary", null, "Bits"),
+      el("div", { class: "scroll" }, el("table", { class: "bits" },
+        el("thead", null, el("tr", null, el("th", null, "Byte"), el("th", null, "Hex"),
+          [7, 6, 5, 4, 3, 2, 1, 0].map((bit) => el("th", null, String(bit))))),
+        el("tbody", null, now.map((_, i) => row(i)))))));
+}
+
+function configMatches(module, block, setting, query) {
+  if (!query) return true;
+  const words = [module.name, module.label, module.request, block.did, setting ? setting.name : "", setting ? setting.group : ""];
+  return words.join(" ").toLowerCase().includes(query);
+}
+
+function renderConfig() {
+  const area = $("config");
+  const draftArea = $("config-drafts");
+  if (!config) {
+    area.replaceChildren();
+    draftArea.replaceChildren();
+    return;
+  }
+  const only = $("config-module").value;
+  const query = $("config-search").value.trim().toLowerCase();
+  const unmapped = $("config-unmapped").checked;
+  const cards = [];
+  let hidden = 0;
+  for (const module of config.modules) {
+    if (only && module.name !== only) continue;
+    const rows = [];
+    const blocks = [];
+    for (const block of module.blocks) {
+      const settings = block.settings.filter((setting) => configMatches(module, block, setting, query));
+      for (const setting of settings) rows.push(settingRow(module, block, setting));
+      if (settings.length || (unmapped && !block.settings.length && configMatches(module, block, null, query))) blocks.push(blockView(module, block));
+      else if (!block.settings.length) hidden++;
+    }
+    if (!rows.length && !blocks.length) continue;
+    cards.push(card(module.name + " · " + module.label, module.request + " / " + module.reply + " · " + module.bus + "-CAN",
+      rows.length ? el("div", null, rows) : null,
+      blocks.length ? [el("h3", null, "Blocks"), blocks] : null));
+  }
+  if (!cards.length) cards.push(el("div", { class: "card" }, el("p", { class: "secondary" },
+    query ? "Nothing matches “" + $("config-search").value.trim() + "”." : "No settings are mapped in this module yet.")));
+  area.replaceChildren(...cards);
+  $("config-note").textContent = hidden && !unmapped
+    ? hidden + (hidden === 1 ? " block has" : " blocks have") + " nothing mapped yet and " + (hidden === 1 ? "is" : "are") + " not shown." : "";
+
+  const pending = [];
+  for (const module of config.modules) {
+    for (const block of module.blocks) {
+      const bytes = drafts.get(blockKey(module, block));
+      if (!bytes) continue;
+      const changed = block.settings.filter((setting) => rawOf(setting, bytes) !== rawOf(setting, bytesOf(block.hex)));
+      pending.push(el("tr", null,
+        td(module.name + " " + block.did, "mono"),
+        td(changed.map((setting) => setting.name).join(", ") || "Unnamed bits"),
+        td(hexOf(bytesOf(block.hex)), "mono"),
+        td(hexOf(bytes), "mono")));
+    }
+  }
+  draftArea.replaceChildren(...(pending.length ? [el("div", { class: "card" },
+    el("div", { class: "head" }, el("h2", null, "Drafted changes"), el("span", { class: "secondary small" }, "Not sent to the car")),
+    table(["Block", "Settings", "Captured", "Draft"], pending),
+    el("div", { class: "toolbar" }, el("button", { class: "quiet", onclick: () => { drafts.clear(); renderConfig(); } }, "Discard all drafts")))] : []));
+}
+
+async function loadConfig() {
+  const result = await api("/api/config");
+  if (result.error) {
+    config = null;
+    $("config-source").textContent = "";
+    renderConfig();
+    $("config").replaceChildren(el("div", { class: "card" }, problem(result.error)));
+    return;
+  }
+  if (!config || config.examples !== result.examples) drafts.clear();
+  config = result;
+  const real = result.modules.filter((module) => module.name !== "EXAMPLE");
+  const settings = real.flatMap((module) => module.blocks.flatMap((block) => block.settings));
+  const blocks = real.reduce((sum, module) => sum + module.blocks.length, 0);
+  $("config-source").textContent = result.car + " · captured blocks · " + settings.length
+    + (settings.length === 1 ? " setting" : " settings") + " mapped in " + blocks + " blocks"
+    + (result.examples ? " · plus made-up examples for the simulated car" : "");
+  fillSelect($("config-module"), [["", "All modules"], ...result.modules.map((module) => [module.name, module.name + " · " + module.label])]);
+  renderConfig();
+}
+
 let activeTab = "live";
 
 /* Fill the open tab if it is one whose content belongs to the connected car. */
 function loadCarTab() {
   if (activeTab === "diagnosis" || activeTab === "drive") loadReportSources().then(loadReport);
+  if (activeTab === "config") loadConfig();
   if (activeTab === "setup") {
     loadSetup();
     loadMaker();
@@ -2156,6 +2491,9 @@ $("gears-learn").addEventListener("click", () => changeGears({ source: $("gears-
 $("gears-clear").addEventListener("click", () => changeGears({ action: "clear" }));
 $("update-check").addEventListener("click", checkForUpdate);
 $("update-install").addEventListener("click", installUpdate);
+$("config-module").addEventListener("change", renderConfig);
+$("config-search").addEventListener("input", renderConfig);
+$("config-unmapped").addEventListener("change", renderConfig);
 
 // A link such as /#drive opens straight on that tab.
 const wantedTab = (location.hash || "").slice(1);

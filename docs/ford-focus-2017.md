@@ -170,6 +170,8 @@ That was checked for `F40C` only, which read zero with the engine off.
 
 ## Configuration blocks
 
+See the [configuration catalog](focus-2017-config-catalog.md) for known settings and the per-module address inventory.
+
 Each module keeps its configuration in a run of identifiers starting at `DE00`.
 FORScan calls these as-built blocks and numbers them from 1:
 
@@ -217,8 +219,8 @@ Two things that did not work:
   a file, `GV6T-14C097-AA.VBF`, which its log calls a secondary bootloader. Its
   download was refused (HTTP 401), so the named view never opened. The raw view
   opens without it.
-- The meaning of the bits is not in the capture. Only one is known, and only by
-  position: see the write below.
+- The capture contains no setting labels. The operator identified the cluster
+  option changed during this session: see [Changing a block](#changing-a-block).
 
 ## Sessions and unlocking
 
@@ -273,8 +275,10 @@ then changed back. Both writes went to block 18, `DE11`:
 | First write | `FF FF 7F 3E` | accepted |
 | Second write | `FF FF FF 3E` | accepted |
 
-So that setting is the top bit of the third byte. Which setting it was is not
-recorded here.
+The operator identified the toggled option as the **key-in-ignition beep**.
+On this Focus, the capture maps that option to the top bit of the third byte
+(mask `80` hex). The bit was cleared and then restored. The log does not say
+which state was labelled enabled in FORScan; do not infer that from bit order.
 
 The sequence, as sent:
 
@@ -356,7 +360,7 @@ answer between `7E8` and `7EF`, on the HS bus. Against what is recorded here:
 ## Not known
 
 - The seed-to-key calculation.
-- What any configuration bit means, apart from the position of one.
+- Which bit state enables the key-in-ignition beep, and what the other configuration bits mean.
 - Which engine-module identifier is which named value.
 - The names of the modules at `7E1`, `765` and `797`.
 - Whether the write sequence is the same on the HS-bus modules.

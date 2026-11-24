@@ -80,6 +80,12 @@ def test_record_then_list_and_download(served):
     assert status == 404 and "no session 7" in body["error"]
 
 
+def test_configuration_blocks(served):
+    status, body = served.request("/api/config")
+    assert status == 200 and body["examples"] is False
+    assert sum(len(module["blocks"]) for module in body["modules"]) == 62
+
+
 def test_bad_requests_get_clear_errors(served):
     assert served.request("/nope")[0] == 404
     assert served.request("/api/nope", {})[0] == 404
