@@ -7,6 +7,7 @@
 # Options:
 #   --root DIR     root of the Pi's filesystem (default /)
 #   --user NAME    account the service runs as (default: the account with user ID 1000)
+#   --no-http      skip the port 80 listener (for a central server with its own proxy)
 #   --vendor DIR   a directory holding the pyserial package ("serial"), copied alongside the
 #                  app for a Pi that cannot install python3-serial itself
 set -eu
@@ -14,11 +15,13 @@ set -eu
 root=/
 user=
 vendor=
+http=yes
 while [ $# -gt 0 ]; do
     case $1 in
         --root) root=$2; shift 2 ;;
         --user) user=$2; shift 2 ;;
         --vendor) vendor=$2; shift 2 ;;
+        --no-http) http=no; shift ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
 done
@@ -62,6 +65,10 @@ rm -f "$rules/50-cardiag-network.rules"  # an earlier name, which sorted too lat
 sed "s/@USER@/$user/" "$here/10-cardiag-network.rules" > "$rules/10-cardiag-network.rules"
 chmod 0644 "$root/etc/systemd/system/cardiag.service" "$rules/10-cardiag-network.rules"
 
+if [ "$http" = yes ]; then
+    install -m 0644 "$here/cardiag-http.service" "$here/cardiag-http.socket" "$root/etc/systemd/system/"
+fi
+
 if [ -z "$root" ]; then
     if [ ! -d "$home/vendor/serial" ] && ! python3 -c 'import serial' 2>/dev/null; then
         echo "pyserial is missing: run 'sudo apt install python3-serial', then 'sudo systemctl restart cardiag'" >&2
@@ -69,7 +76,13 @@ if [ -z "$root" ]; then
     systemctl daemon-reload
     systemctl enable cardiag.service
     systemctl restart cardiag.service
+    if [ "$http" = yes ]; then
+        systemctl enable --now cardiag-http.socket
+    fi
 else
     systemctl --root="$root" enable cardiag.service
+    if [ "$http" = yes ]; then
+        systemctl --root="$root" enable cardiag-http.socket
+    fi
 fi
 echo "Installed cardiag $version for $user in ${root:-/}"

@@ -231,19 +231,24 @@ sudo nmcli device wifi hotspot ifname wlan0 con-name cardiag ssid cardiag passwo
 sudo nmcli connection modify cardiag connection.autoconnect yes
 
 # Step 2: get the code and install it as a service
-sudo apt install -y git python3-serial
+sudo apt install -y git python3-serial avahi-daemon
 git clone https://github.com/yycholla/cardiag.git ~/cardiag
 sudo ~/cardiag/deploy/pi/install.sh
 ```
 
 Step 3: join the `cardiag` Wi-Fi from the phone or iPad and open
-`http://10.42.0.1:8000` (or `http://<the Pi's hostname>.local:8000`).
+`http://cardiag.local` if the Pi is named `cardiag` (otherwise use its
+hostname followed by `.local`). If the name doesn't resolve on the Pi's own
+hotspot, use `http://10.42.0.1`. The installer adds a port 80 listener and
+keeps the old port 8000 address working. Type `http://` explicitly if your
+browser tries HTTPS.
 
 `install.sh` copies the app to `/opt/cardiag`, installs the `cardiag` command
 and the service, and lets the service change the Pi's Wi-Fi. It can also
 prepare an SD card from another computer, with no internet on the Pi:
 `sudo deploy/pi/install.sh --root /path/to/rootfs --vendor DIR`, where `DIR`
-holds an unpacked copy of pyserial.
+holds an unpacked copy of pyserial. The SD card needs `avahi-daemon` for
+the `.local` name; the Pi's IP address works without it.
 
 ### Joining your Wi-Fi
 
@@ -254,7 +259,7 @@ goes away.
 
 To work on the Pi at home, save your Wi-Fi under Settings, then press Join.
 The hotspot switches off, the Pi joins your network, and the page moves to
-`http://<the Pi's hostname>.local:8000`. Press "Switch back to the hotspot"
+`http://cardiag.local` (or the Pi's hostname followed by `.local`). Press "Switch back to the hotspot"
 when done, or just power the Pi off: the next boot is a hotspot again.
 
 ### A phone or tablet as the way out
@@ -262,9 +267,13 @@ when done, or just power the Pi off: the next boot is a hotspot again.
 Save your phone's or tablet's hotspot under Settings → "Travelling hotspot".
 The Pi joins it by itself whenever it comes into range and keeps looking for it
 while it is away; its own hotspot comes back whenever the other one is gone.
-Other devices on that hotspot reach the page at
-`http://<the Pi's hostname>.local:8000`. "Switch back to the hotspot" makes the
-Pi stay on its own network until you press "Join it now" or it restarts.
+On the phone or another device on that hotspot, try `http://cardiag.local`
+(or the Pi's hostname followed by `.local`). Some mobile hotspots block
+multicast name discovery. If the name doesn't resolve, use `http://<Pi's IP>`
+with the address it got from the phone. If the phone also blocks devices from
+talking to one another, switch back to the Pi's own hotspot. "Switch back to
+the hotspot" makes the Pi stay on its own network until you press
+"Join it now" or it restarts.
 
 Phones often stop advertising their hotspot until its settings screen is open,
 so the first join after a while can need that screen opened once.

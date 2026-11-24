@@ -1,0 +1,9 @@
+[Unit]
+Description=Forward port 80 to the cardiag web interface
+Requires=cardiag.service
+After=cardiag.service
+
+[Service]
+ExecStart=/lib/systemd/systemd-socket-proxyd 127.0.0.1:8000
+DynamicUser=yes
+NoNewPrivileges=yes

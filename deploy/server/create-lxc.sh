@@ -62,7 +62,7 @@ tar -C "$checkout" --exclude=__pycache__ -cf - deploy src/cardiag |
     ssh "$pve" "pct exec $id -- sh -c 'rm -rf /root/cardiag && mkdir /root/cardiag && tar -C /root/cardiag -xf -'"
 ssh "$pve" pct exec "$id" -- sh -s <<'EOF'
 set -eu
-/root/cardiag/deploy/pi/install.sh --user cardiag
+/root/cardiag/deploy/pi/install.sh --user cardiag --no-http
 install -d /etc/systemd/system/cardiag.service.d
 cp /root/cardiag/deploy/server/central.conf /etc/systemd/system/cardiag.service.d/central.conf
 rm -f /etc/polkit-1/rules.d/10-cardiag-network.rules  # Wi-Fi switching is for the box in the car
