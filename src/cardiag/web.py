@@ -19,7 +19,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from . import __version__, garage
+from . import __version__, asbuilt, garage
 from .elm import AdapterError
 from .frames import FrameError
 from .network import NetworkError, Wifi
@@ -107,6 +107,8 @@ class _Handler(BaseHTTPRequestHandler):
             self._json({"managed": True, **uploader.status()} if uploader else {"managed": False})
         elif path == "/api/presets":
             self._json(garage.presets(hub))
+        elif path == "/api/config":
+            self._json(asbuilt.report(hub.status()["simulation"]))
         elif path == "/api/maker":
             self._json(garage.maker_report(hub))
         elif path == "/api/discoveries":

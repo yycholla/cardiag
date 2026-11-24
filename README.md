@@ -91,6 +91,12 @@ unplugged or the ignition is off, so it can be started first. The tabs:
   every shift with how long it took and how far the engine flared, slip under
   load per gear, and pull times through each speed span. "Start a drive
   capture" records a few values, so each is read more often.
+- **Configuration:** the 2017 Focus's configuration blocks as captured from
+  FORScan, and the settings mapped onto them so far, each with a control for
+  its kind (on/off, a list of choices, a number, several switches, raw bytes).
+  A change is only drafted: the page shows the block it would make and sends
+  nothing. Settings are added in `src/cardiag/asbuilt.py`; with a simulated car
+  the tab also shows made-up examples of every kind.
 
 A recording can be made in one of four ways, picked beside the record button
 or on the Drive tab. Fewer values means each is read more often:
