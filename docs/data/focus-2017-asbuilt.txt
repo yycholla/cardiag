@@ -1,0 +1,96 @@
+# As-built configuration blocks of a 2017 Ford Focus 2.0 GDI, as read by FORScan 2.3.72.
+# Read with: 22 <identifier> sent to the module address; the reply comes from address + 8.
+# "block" is the number FORScan and .abt files use. "refused" lists identifiers FORScan asked for and the module declined.
+# The VIN has been replaced with a placeholder.
+
+BdyCM (body control)  address 726  reply 72E  bus HS-CAN 500k
+  DE00  block 01   50 bytes  0100018463000000001241385300F51932010E3C0900000B0B924000004040037D00000A0000000000000000000000000000
+  DE01  block 02    4 bytes  00042424
+  DE02  block 03    2 bytes  0101
+  DE03  block 04    2 bytes  0100
+  DE04  block 05    1 bytes  00
+  DE05  block 06    1 bytes  00
+  refused: DE06 DE07 DE08 DE09 DE0A
+
+PCM (engine)  address 7E0  reply 7E8  bus HS-CAN 500k
+  DE00  block 01   52 bytes  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF2AFFFFFFFFFFFFFFFFFFFFFFFF0FFFFFFFFF1FFFF21FFFFFFFFFFFFFFFFFFF
+  DE01  block 02   52 bytes  261E803F1CC17F3F4C22803F00BE7F3FC0EB7F3F3B15803FD7AC7F3F7A1E803FAF18803FDCCD7F3F6C1E803FEFC37F3F00000000
+  refused: DE02 DE03 DE04 DE05 DEA0 DEA1 DEA2 DEA3 DEA4 DEC2 DEC3 DEC4 DEC5 DEC6 DED1 DED2
+
+APIM (SYNC)  address 7D0  reply 7D8  bus HS-CAN 500k
+  DE00  block 01    8 bytes  1065880002404000
+  DE01  block 02    6 bytes  045553000000
+  DE02  block 03    5 bytes  0000000000
+  refused: DE03 DE04 DE05 DE06 DE07 DE08 DE09 DE0A DE0B
+
+ABS  address 760  reply 768  bus HS-CAN 500k
+  DE00  block 01   17 bytes  <VIN,17bytes>
+  refused: DE01 DE02 DE03 DE04 DE05
+
+RCM (airbag)  address 737  reply 73F  bus HS-CAN 500k
+  DE00  block 01   17 bytes  <VIN,17bytes>
+  DE01  block 02    8 bytes  C76ACF3B100C6600
+  DE02  block 03    2 bytes  8165
+  DE03  block 04    2 bytes  0F50
+  DE05  block 06    1 bytes  00
+  refused: DE04 DE06 DE07 DE08 DE09
+
+PSCM (power steering)  address 730  reply 738  bus HS-CAN 500k
+  DE00  block 01    1 bytes  14
+  refused: DE01 DE02 DE03 DE04 DE05 DE06 DE07 DE08 DE09
+
+FCDIM (display)  address 7A5  reply 7AD  bus MS-CAN 125k
+  DE00  block 01    7 bytes  22220008000010
+  DE01  block 02    6 bytes  000155538000
+  DE02  block 03    4 bytes  00010000
+  DE03  block 04    2 bytes  0000
+  refused: DE04 DE05 DE06 DE07 DE08
+
+ACM (audio)  address 727  reply 72F  bus MS-CAN 125k
+  DE00  block 01    6 bytes  78002C000007
+  DE01  block 02    1 bytes  2E
+  DE02  block 03    1 bytes  30
+  DE03  block 04    5 bytes  0001025553
+  DE04  block 05   10 bytes  12040B5722763E572F12
+  DE05  block 06   20 bytes  16001A001C001F002200380048005A0005000700
+  DE06  block 07   20 bytes  00000A00330035005C0064005C00350033000A00
+  DE07  block 08   30 bytes  9799009826009A9B00009A9B000000000000FFFF00FFFFFFFFFFFFFFFF00
+  refused: DE08 DE09 DE0A DE0B
+
+IPC (instrument cluster)  address 720  reply 728  bus MS-CAN 125k
+  DE00  block 01    4 bytes  43010000
+  DE01  block 02   10 bytes  001E9C1F0A062452101F
+  DE02  block 03    4 bytes  BFCB0402
+  DE03  block 04    4 bytes  07040302
+  DE04  block 05    4 bytes  07040302
+  DE05  block 06    4 bytes  34000403
+  DE06  block 07    3 bytes  011E00
+  DE07  block 08    4 bytes  18000800
+  DE08  block 09    4 bytes  001E053C
+  DE09  block 10    1 bytes  FE
+  DE0A  block 11    4 bytes  05000000
+  DE0B  block 12   34 bytes  03FF03DA03DA03FF03FF03A203FF01FF02800300037603FF02BC0320038403B603FF
+  DE0C  block 13   22 bytes  0403E801050A0F141A2027303B4A5D7DA6AAACAFB1B4
+  DE0D  block 14   16 bytes  2814006450281400190A006432190A00
+  DE10  block 17    4 bytes  FFFFFF9F
+  DE11  block 18    4 bytes  FFFFFF3E
+  DE12  block 19    4 bytes  FFFFFFFF
+  DE13  block 20    4 bytes  FFFEFFFF
+  DE14  block 21    4 bytes  FF7FFFFF
+  DE15  block 22    4 bytes  FFFFFFFF
+  DE16  block 23    4 bytes  BFFFFF0F
+  DE1A  block 27    1 bytes  E0
+  DE1B  block 28    4 bytes  FF3F1900
+  DE1C  block 29    4 bytes  7F1E0000
+  DE1D  block 30    4 bytes  FFFF0F00
+  DE1E  block 31    4 bytes  FFFF7F00
+  DE1F  block 32    1 bytes  F0
+  DE21  block 34    4 bytes  16010000
+  DE22  block 35    4 bytes  FBFFFF47
+  DE23  block 36    4 bytes  00000000
+  refused: DE0E DE0F DE17 DE18 DE19 DE20 DE24 DE25 DE26 DE27 DE28
+
+GPSM (GPS)  address 701  reply 709  bus MS-CAN 125k
+  DE00  block 01    1 bytes  20
+  DE01  block 02    7 bytes  00000000000000
+  refused: DE02 DE03 DE04 DE05

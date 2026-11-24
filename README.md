@@ -138,6 +138,11 @@ come from an owners' forum, not from Ford, and have not been confirmed on a car
 by this project. No identifier for clutch temperature or commanded gear is
 built in, because none could be confirmed.
 
+What FORScan itself asks a 2017 Focus, module by module, is written up in
+[docs/ford-focus-2017.md](docs/ford-focus-2017.md): the addresses, the
+identifiers the engine module answers, the configuration blocks, and the
+sequence that changes one. cardiag does not send that sequence.
+
 What the Drive tab can and cannot know: standard OBD-II reports no gear, no
 clutch state and no transmission temperature. The gear map, shifts and slip
 there are worked out from engine speed and road speed. The transmission
