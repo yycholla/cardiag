@@ -18,6 +18,9 @@ RPM, SPEED, LOAD, COOLANT = "01:0C", "01:0D", "01:04", "01:05"
 STFT, LTFT, MAP, TIMING, IAT, MAF = "01:06", "01:07", "01:0B", "01:0E", "01:0F", "01:10"
 THROTTLE, OIL, MODULE_VOLTS, PEDAL = "01:11", "01:5C", "01:42", "01:49"
 ADAPTER_VOLTS = "adapter:voltage"
+# What this gearbox calls the slip of its two clutches, where it has been set up to report them (see maker.py).
+CLUTCH_A = "22:7E9:1EBB"
+CLUTCH_B = "22:7E9:1EBC"
 
 RPM_EDGES = [0, 1000, 1500, 2000, 2500, 3000, 4000, 7000]
 LOAD_EDGES = [0, 20, 35, 50, 65, 80, 101]
@@ -310,27 +313,20 @@ def _effort(values: dict[str, float]) -> float | None:
     return None
 
 
-def learn_gears(passes: list[Pass]) -> list[dict]:
-    """Find the gears as steady engine-speed-to-road-speed ratios, highest ratio (first gear) first.
-
-    Only light-effort stretches count, because a clutch that slips under load
-    would otherwise be learned as a gear of its own.
-    """
-    runs: list[tuple[float, float]] = []  # (ratio, seconds)
+def _steady(series: Iterable[tuple[float, float | None, float]]) -> list[tuple[float, float]]:
+    """Stretches where a ratio held still, as (ratio, seconds). `series` is (time, ratio or None, km/h)."""
+    runs: list[tuple[float, float]] = []
     current: list[tuple[float, float]] = []  # (time, ratio)
 
     def close() -> None:
-        if len(current) >= 4 and current[-1][0] - current[0][0] >= 1.5:
+        if len(current) >= 3 and current[-1][0] - current[0][0] >= 1.5:
             runs.append((median(r for _, r in current), current[-1][0] - current[0][0]))
         current.clear()
 
-    for t, values in passes:
-        speed, rpm, effort = values.get(SPEED), values.get(RPM), _effort(values)
-        light = effort is None or effort < (35 if PEDAL in values or THROTTLE in values else 50)
-        if speed is None or rpm is None or speed < _MIN_GEAR_SPEED or rpm < 500 or not light:
+    for t, ratio, speed in series:
+        if ratio is None:
             close()
             continue
-        ratio = rpm / speed
         if current:
             centre = sum(r for _, r in current) / len(current)
             # Speed arrives in whole km/h, so at low speed the ratio wobbles without the gear changing.
@@ -338,7 +334,11 @@ def learn_gears(passes: list[Pass]) -> list[dict]:
                 close()
         current.append((t, ratio))
     close()
+    return runs
 
+
+def _clusters(runs: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """Steady stretches gathered into gears, as (ratio, seconds), highest ratio first."""
     clusters: list[list[tuple[float, float]]] = []
     for ratio, seconds in sorted(runs, reverse=True):
         if clusters:
@@ -348,12 +348,103 @@ def learn_gears(passes: list[Pass]) -> list[dict]:
                 clusters[-1].append((ratio, seconds))
                 continue
         clusters.append([(ratio, seconds)])
-    gears = []
+    found = []
     for cluster in clusters:
         seconds = sum(s for _, s in cluster)
         if seconds >= 3.0:
-            gears.append({"ratio": _round(sum(r * s for r, s in cluster) / seconds), "seconds": _round(seconds, 1)})
+            found.append((sum(r * s for r, s in cluster) / seconds, seconds))
+    return found
+
+
+def _carrying(values: dict[str, float]) -> tuple[str, float] | None:
+    """Which clutch is passing the drive, and its slip in rpm, when the gearbox reports both clutches.
+
+    The clutch nearer to turning with the engine is the one in use. When neither is
+    within 15 % of engine speed the car is pulling away or between gears.
+    """
+    rpm, a, b = values.get(RPM), values.get(CLUTCH_A), values.get(CLUTCH_B)
+    if rpm is None or a is None or b is None or rpm < 300:
+        return None
+    name, slip = ("A", a) if abs(a) <= abs(b) else ("B", b)
+    return (name, slip) if abs(slip) <= 0.15 * rpm else None
+
+
+def _shaft(values: dict[str, float], clutch: str) -> float | None:
+    """Rpm per km/h of one clutch's shaft: engine speed less that clutch's slip, over road speed."""
+    rpm, speed, slip = values.get(RPM), values.get(SPEED), values.get(CLUTCH_A if clutch == "A" else CLUTCH_B)
+    if rpm is None or speed is None or slip is None or speed < _MIN_GEAR_SPEED:
+        return None
+    return (rpm - slip) / speed
+
+
+def _learn_from_clutches(passes: list[Pass]) -> list[dict]:
+    """The gears, from the shaft speed of whichever clutch is carrying the drive.
+
+    Shaft speed already leaves the slip out, so every moment in gear counts, gentle or
+    hard, and each gear is known to belong to one clutch. That is why this needs no
+    steady stretches: readings are gathered by ratio, and a gear is wherever enough of
+    them agree.
+    """
+    gears = []
+    spent = _dwell(passes)
+    step = math.log(1.02)
+    for clutch in ("A", "B"):
+        seen: list[tuple[int, float, float]] = []  # (which 2 % band the ratio falls in, ratio, seconds)
+        before: float | None = None
+        for (_, values), seconds in zip(passes, spent):
+            carrying = _carrying(values)
+            ratio = _shaft(values, clutch) if carrying and carrying[0] == clutch else None
+            ratio = ratio if ratio and ratio > 0 else None
+            # The values of one pass are read a moment apart, so while the car is gaining or losing
+            # speed quickly the ratio is off. Two readings in a row that agree are not.
+            if ratio and before and abs(ratio / before - 1) < 0.06:
+                seen.append((round(math.log(ratio) / step), ratio, min(seconds, 2.0)))
+            before = ratio
+        while seen:
+            weight: dict[int, float] = {}
+            for band, _, seconds in seen:
+                for near in range(band - 3, band + 4):
+                    weight[near] = weight.get(near, 0.0) + seconds
+            centre = max(weight, key=lambda band: weight[band])
+            members = sorted((ratio, seconds) for band, ratio, seconds in seen if abs(band - centre) <= 3)
+            if len(members) < 4 or weight[centre] < 3.0:
+                break
+            gears.append({"ratio": _round(members[len(members) // 2][0]), "seconds": _round(weight[centre], 1), "clutch": clutch})
+            seen = [item for item in seen if abs(item[0] - centre) > 8]  # nothing within 17 % is another gear of this clutch
+    gears.sort(key=lambda gear: -gear["ratio"])
+    if gears:
+        # First gear is held for moments, while pulling away, and rarely steadily enough to be found
+        # above. A clutch seen driving well above the highest gear found is first gear all the same.
+        top = gears[0]
+        other = "B" if top["clutch"] == "A" else "A"
+        above = sorted(
+            ratio for _, values in passes
+            if (carrying := _carrying(values)) and carrying[0] == other
+            and (ratio := _shaft(values, other)) and 1.3 * top["ratio"] < ratio < 4 * top["ratio"]
+        )
+        if len(above) >= 5:
+            gears.insert(0, {"ratio": _round(above[len(above) // 2]), "seconds": 0.0, "clutch": other, "rough": True})
     return gears
+
+
+def learn_gears(passes: list[Pass]) -> list[dict]:
+    """Find the gears as steady engine-speed-to-road-speed ratios, highest ratio (first gear) first.
+
+    Where the gearbox reports the slip of its two clutches, the gears come from those: see
+    `_learn_from_clutches`. Otherwise only light-effort stretches count, because a clutch
+    that slips under load would otherwise be learned as a gear of its own.
+    """
+    if _has(passes, CLUTCH_A) and _has(passes, CLUTCH_B):
+        gears = _learn_from_clutches(passes)
+        if len(gears) >= 2:
+            return gears
+    series = []
+    for t, values in passes:
+        speed, rpm, effort = values.get(SPEED), values.get(RPM), _effort(values)
+        light = effort is None or effort < (35 if PEDAL in values or THROTTLE in values else 50)
+        steady = speed is not None and rpm is not None and speed >= _MIN_GEAR_SPEED and rpm >= 500 and light
+        series.append((t, rpm / speed if steady else None, speed or 1.0))
+    return [{"ratio": _round(ratio), "seconds": _round(seconds, 1)} for ratio, seconds in _clusters(_steady(series))]
 
 
 def _tolerance(speed: float) -> float:
@@ -361,23 +452,114 @@ def _tolerance(speed: float) -> float:
     return 2.0 + 60.0 / speed
 
 
-def _assign(values: dict[str, float], ratios: list[float]) -> tuple[int | None, float]:
-    """Which gear a pass is in (index into ratios), and how far above that gear's line it sits."""
+def _by_clutch(gears: list[dict]) -> bool:
+    """Whether these gears were learned with the clutch each belongs to."""
+    return bool(gears) and all(gear.get("clutch") for gear in gears)
+
+
+def _assign(values: dict[str, float], gears: list[dict]) -> tuple[int | None, float]:
+    """Which gear a pass is in (index into gears), and the percent the engine turns faster than that gear accounts for."""
     speed, rpm = values.get(SPEED), values.get(RPM)
-    if speed is None or rpm is None or speed < _MIN_GEAR_SPEED or not ratios:
+    if speed is None or rpm is None or speed < _MIN_GEAR_SPEED or not gears:
         return None, 0.0
+    if _by_clutch(gears) and CLUTCH_A in values and CLUTCH_B in values:
+        carrying = _carrying(values)
+        if carrying is None:
+            return None, 0.0
+        clutch, slip = carrying
+        shaft = (rpm - slip) / speed
+        own = [index for index, gear in enumerate(gears) if gear["clutch"] == clutch]
+        if not own or shaft <= 0:
+            return None, 0.0
+        gear = min(own, key=lambda index: abs(math.log(shaft / gears[index]["ratio"])))
+        if abs(shaft / gears[gear]["ratio"] - 1) * 100 > _tolerance(speed) + 4:
+            return None, 0.0
+        return gear, slip / (rpm - slip) * 100
     ratio = rpm / speed
-    gear = min(range(len(ratios)), key=lambda index: abs(math.log(ratio / ratios[index])))
-    slip = (ratio / ratios[gear] - 1) * 100
+    gear = min(range(len(gears)), key=lambda index: abs(math.log(ratio / gears[index]["ratio"])))
+    slip = (ratio / gears[gear]["ratio"] - 1) * 100
     if slip > _MAX_SLIP or slip < -(_tolerance(speed) + 2):
         return None, 0.0
     return gear, slip
 
 
-def gear_now(values: dict[str, float], ratios: list[float]) -> tuple[int | None, float | None]:
+def gear_now(values: dict[str, float], gears: list[dict]) -> tuple[int | None, float | None]:
     """The gear one pass is in, counted from 1, and the percent it sits above that gear's line."""
-    gear, slip = _assign(values, ratios)
+    gear, slip = _assign(values, gears)
     return (None, None) if gear is None else (gear + 1, _round(slip, 1))
+
+
+def _working(values: dict[str, float]) -> bool:
+    """Whether the engine is pulling hard enough for a weak clutch to show."""
+    if LOAD in values:
+        return values[LOAD] >= 60
+    effort = _effort(values)
+    return effort is not None and effort >= 40
+
+
+def _slip_rpm(values: dict[str, float], gear: dict) -> float | None:
+    """Slip of the clutch this gear belongs to, in rpm, where the gearbox reports it."""
+    key = {"A": CLUTCH_A, "B": CLUTCH_B}.get(gear.get("clutch") or "")
+    return values.get(key) if key else None
+
+
+def _middle(numbers: list[float]) -> float | None:
+    return _round(median(numbers), 0) if numbers else None
+
+
+def clutch_report(moving: list[Pass], assigned: list[tuple[int | None, float]], gears: list[dict], dwell: list[float], start: float) -> dict:
+    """What the gearbox's own clutch figures show: slip against load and engine speed, and the gear waiting on the idle shaft."""
+    if not (_by_clutch(gears) and _has(moving, CLUTCH_A) and _has(moving, CLUTCH_B)):
+        return {"available": False}
+    by_gear = []
+    for number, gear in enumerate(gears):
+        light, hard, seconds = [], [], 0.0
+        for (index, _), (_, values), spent in zip(assigned, moving, dwell):
+            slip = _slip_rpm(values, gear)
+            if index != number or slip is None or LOAD not in values:
+                continue
+            if values[LOAD] >= 60:
+                hard.append(slip)
+                seconds += spent
+            elif values[LOAD] < 40:
+                light.append(slip)
+        by_gear.append({"gear": number + 1, "clutch": gear["clutch"], "light": _middle(light), "working": _middle(hard),
+                        "peak": _round(max(hard), 0) if hard else None, "seconds": _round(seconds, 1)})
+    by_rpm = []
+    for low, high in zip(RPM_EDGES[1:], RPM_EDGES[2:]):
+        slips = [
+            slip for (index, _), (_, values) in zip(assigned, moving)
+            if index is not None and values.get(LOAD, 0) >= 60 and low <= values[RPM] < high
+            and (slip := _slip_rpm(values, gears[index])) is not None
+        ]
+        if len(slips) >= 3:
+            by_rpm.append({"from": low, "to": high, "median": _middle(slips), "over": _round(sum(s > 50 for s in slips) / len(slips), 2), "passes": len(slips)})
+
+    # Each shaft holds one of its own gears, in use or ready for the next shift. A change of
+    # that gear should be quick; a shaft that sits between gears is one that is not engaging.
+    changes = []
+    for clutch in ("A", "B"):
+        own = [n for n, gear in enumerate(gears) if gear["clutch"] == clutch]
+        last: tuple[float, int] | None = None  # when this shaft was last seen in a gear, and which
+        for t, values in moving:
+            shaft = _shaft(values, clutch)
+            if shaft is None or not own:
+                last = None  # too slow to tell: whatever happens here is not timed
+                continue
+            if shaft <= 0:
+                continue
+            near = min(own, key=lambda n: abs(math.log(shaft / gears[n]["ratio"])))
+            if abs(shaft / gears[near]["ratio"] - 1) * 100 > _tolerance(values[SPEED]) + 4:
+                continue
+            if last is not None and near + 1 != last[1]:
+                changes.append({"at": _round(last[0] - start, 1), "clutch": clutch, "from": last[1], "to": near + 1, "took": _round(t - last[0], 1)})
+            last = (t, near + 1)
+    changes.sort(key=lambda change: change["at"])
+    typical = median(dwell) if dwell else 0.25
+    for change in changes:
+        change["slow"] = change["took"] > max(2.0, 4 * typical)
+    return {"available": True, "by_gear": by_gear, "by_rpm": by_rpm, "changes": changes,
+            "slow_changes": sum(change["slow"] for change in changes)}
 
 
 def drive_report(passes: list[Pass], gears: list[dict]) -> dict:
@@ -387,10 +569,12 @@ def drive_report(passes: list[Pass], gears: list[dict]) -> dict:
     moving = [(t, v) for t, v in passes if RPM in v and SPEED in v]
     points = [[v[SPEED], v[RPM], 2] for _, v in moving]
     start = passes[0][0]
+    clutched = _by_clutch(gears) and _has(moving, CLUTCH_A) and _has(moving, CLUTCH_B)
     report = {
         "available": True,
         "gears": gears,
         "learned": bool(gears),
+        "by_clutch": clutched,
         "top_speed": max((v[SPEED] for _, v in moving), default=0),
         "top_rpm": max((v[RPM] for _, v in moving), default=0),
         "rpm": [[_round(t - start, 1), v[RPM]] for t, v in _thin(moving, 240)],
@@ -399,12 +583,15 @@ def drive_report(passes: list[Pass], gears: list[dict]) -> dict:
         "timeline": [],
         "shifts": [],
         "slip": [],
+        "clutches": {"available": False},
+        "coarse": False,
+        "rate": None,
     }
     if not gears:
         return report
 
     ratios = [gear["ratio"] for gear in gears]
-    assigned = [_assign(v, ratios) for _, v in moving]
+    assigned = [_assign(v, gears) for _, v in moving]
     dwell = _dwell(moving)
     for point, (gear, slip), (_, values) in zip(points, assigned, moving):
         if gear is not None:
@@ -424,10 +611,18 @@ def drive_report(passes: list[Pass], gears: list[dict]) -> dict:
     typical = median(dwell) if dwell else 0.25
     shifts = []
     last: int | None = None  # index of the latest pass sitting cleanly in a gear
+    disturbed = False  # whether anything but a clean pass in that gear has been seen since
+    run: int | None = None  # where the present unbroken run of clean passes in one gear began
     for index, (gear, slip) in enumerate(assigned):
         if gear is None:
+            disturbed, run = True, None
             continue
-        locked = slip <= _tolerance(moving[index][1][SPEED]) + 1
+        allowed = _tolerance(moving[index][1][SPEED]) + 1
+        locked = slip <= allowed and (not clutched or slip >= -allowed)
+        if not locked:
+            run = None
+        elif run is None or assigned[run][0] != gear:
+            run = index
         if last is not None and assigned[last][0] != gear:
             began, ended = moving[last], moving[index]
             took = ended[0] - began[0]
@@ -438,36 +633,63 @@ def drive_report(passes: list[Pass], gears: list[dict]) -> dict:
                 flare = peak - began[1][RPM] if up else 0.0
                 flare = flare if flare >= 75 else 0.0
                 slow = took > max(1.5, 3 * typical)
-                shifts.append(
-                    {"from": was + 1, "to": gear + 1, "at": _round(began[0] - start, 1), "rpm": round(began[1][RPM]),
-                     "speed": round(began[1][SPEED]), "effort": _effort(began[1]), "took": _round(took, 1),
-                     "flare": round(flare), "result": " and ".join(w for w, on in (("flare", flare), ("slow", slow)) if on) or "clean",
-                     "index": [last, index]}
-                )
-            last = index if locked else None
-        elif locked or last is None:
+                found = {"flare": flare, "slow": slow}
+                shift = {"from": was + 1, "to": gear + 1, "at": _round(began[0] - start, 1), "rpm": round(began[1][RPM]),
+                         "speed": round(began[1][SPEED]), "effort": _effort(began[1]), "took": _round(took, 1),
+                         "flare": round(flare), "index": [last, index]}
+                if clutched:
+                    # Both clutches open at once is the engine driving nothing; the new one still
+                    # slipping after it has taken over is a gear that has not bitten.
+                    between = moving[last + 1 : index]
+                    gap = max((min(v[CLUTCH_A], v[CLUTCH_B]) for _, v in between if CLUTCH_A in v and CLUTCH_B in v), default=0.0)
+                    gap = max(0.0, gap)  # the engine turning faster than both shafts: neither clutch holding it
+                    after = [
+                        abs(slip_rpm) for (t, v), (now, _) in zip(moving[index + 1 : index + 9], assigned[index + 1 : index + 9])
+                        if now == gear and t - ended[0] <= 3.0 and (slip_rpm := _slip_rpm(v, gears[gear])) is not None
+                    ]
+                    settle = max(after, default=0.0)
+                    shift.update(gap=round(gap), after=round(settle))
+                    found["neither clutch holding"] = gap >= 300
+                    found["slipping in"] = settle >= 250
+                shift["result"] = " and ".join(word for word, on in found.items() if on) or "clean"
+                shifts.append(shift)
+            last, disturbed = (index if locked else None), False
+        elif last is None:
+            last, disturbed = index, not locked
+        elif not locked:
+            disturbed = True
+        elif not (clutched and disturbed):
             last = index
+        elif run is not None and index > run and moving[index][0] - moving[run][0] >= 0.5:
+            # With the clutch figures, an engine falling back through the old shaft's speed on its way to
+            # the next gear reads as locked for a moment. Only a run that lasts is the gear holding again.
+            last, disturbed = index, False
     for shift in shifts:
         first, final = shift.pop("index")
         lo, hi = max(0, first - 12), min(len(moving), final + 13)
         was, now = ratios[shift["from"] - 1], ratios[shift["to"] - 1]
         shift["trace"] = [
-            [_round(t - start, 1), v[RPM], round(v[SPEED] * (was if position + lo <= first else now))]
+            [_round(t - start, 1), v[RPM], round(v[SPEED] * (was if position + lo <= first else now)),
+             *([v.get(CLUTCH_A), v.get(CLUTCH_B)] if clutched else [])]
             for position, (t, v) in enumerate(moving[lo:hi])
         ]
     report["shifts"] = shifts
+    # Below about three readings a second a shift is one or two readings long, and the values
+    # of one pass are read too far apart to compare: the figures above are then rough.
+    report["coarse"] = typical > 0.35
+    report["rate"] = _round(1 / typical, 1) if typical else None
 
     for number in range(len(ratios)):
         total = seconds_in = 0.0
         for (gear, slip), (_, values), seconds in zip(assigned, moving, dwell):
-            effort = _effort(values)
-            if gear == number and values[SPEED] >= 25 and effort is not None and effort >= 40:
+            if gear == number and values[SPEED] >= 25 and _working(values):
                 total += slip * seconds
                 seconds_in += seconds
         report["slip"].append(
             {"gear": number + 1, "seconds": _round(seconds_in, 1),
              "mean": _round(total / seconds_in, 1) if seconds_in >= 2 else None}
         )
+    report["clutches"] = clutch_report(moving, assigned, gears, dwell, start)
     return report
 
 

@@ -25,7 +25,7 @@ def drive() -> tuple[dict, list]:
     context = []
     for lap in range(2):
         for index in range(0, len(states), 5):
-            rpm, speed, pedal, load, gear, slip = states[index]
+            rpm, speed, pedal, load, gear, slip, _ = states[index]
             t = lap * 150 + index * _DCT_STEP
             context.append((t, {analysis.RPM: rpm, analysis.SPEED: float(round(speed)), analysis.PEDAL: pedal,
                                 analysis.LOAD: load, analysis.COOLANT: 90.0}))

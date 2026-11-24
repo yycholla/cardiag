@@ -213,6 +213,33 @@ class Obd:
             return None
         return _reading(0x01, pid, replies[0].data[2:], replies[0].ecu)
 
+    def read_pids(self, pids: list[int]) -> list[Reading] | None:
+        """Several live parameters in one request, from the engine computer: one round trip in place of several.
+
+        CAN vehicles take up to six in a request. None means this car would not
+        answer them together, and they have to be asked for one at a time.
+        """
+        if self.protocol is None or self.protocol.family != "can" or not 1 < len(pids) <= 6:
+            return None
+        if any(pid not in PIDS or pid % 0x20 == 0 for pid in pids):
+            return None
+        self._address(None)
+        try:
+            lines = self.elm.request(bytes([0x01, *pids]).hex().upper())
+        except NoData:
+            return None
+        replies = sorted((m for m in self._parse(lines) if m.data[:1] == b"\x41"), key=lambda message: message.ecu)
+        if not replies:
+            return None
+        data, readings = replies[0].data[1:], {}
+        while data and len(readings) < len(pids):
+            spec = PIDS.get(data[0])
+            if data[0] not in pids or spec is None or len(data) < 1 + spec.size:
+                return None
+            readings[data[0]] = _reading(0x01, data[0], data[1 : 1 + spec.size], replies[0].ecu)
+            data = data[1 + spec.size :]
+        return [readings[pid] for pid in pids] if len(readings) == len(pids) else None
+
     def monitor_status(self) -> list[MonitorStatus]:
         """Check-engine light state and emissions readiness, per module."""
         return [

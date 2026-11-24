@@ -90,8 +90,21 @@ unplugged or the ignition is off, so it can be started first. The tabs:
 - **Drive:** engine speed against road speed with a line per learned gear,
   every shift with how long it took and how far the engine flared, slip under
   load per gear, and pull times through each speed span. "Start a drive
-  capture" records with only the values shifting needs, so each is read more
-  often.
+  capture" records a few values, so each is read more often.
+
+A recording can be made in one of four ways, picked beside the record button
+or on the Drive tab. Fewer values means each is read more often:
+
+- **Everything being watched:** the values chosen on the Live tab and every
+  maker-specific value, at the rate set under Polling.
+- **Shifts:** engine speed, road speed, pedal, load and the two clutch-slip
+  values. The standard ones are asked for in a single request, and the
+  polling rate is ignored, so this is the fastest. Use it to catch a bad shift.
+- **Drive:** what the Drive tab works from, with every maker-specific value.
+- **Fuelling:** fuel trims, air flow, manifold pressure, timing and coolant.
+
+The values you watch are not changed by any of them, and come back when the
+recording stops.
 
 A link ending in `#drive`, `#diagnosis` and so on opens on that tab.
 
@@ -113,6 +126,22 @@ something you define: the module, the identifier, how many bytes make the
 number, whether it can be negative, and what to multiply and add. Once defined,
 a value is read on every update, shown on the Live tab, kept in recordings and
 traced on the Drive tab.
+
+Two of them change what the Drive tab can do. On the dual-clutch Focus,
+identifiers `1EBB` and `1EBC` on the transmission (`7E9`) are the slip of its
+two clutches: engine speed less the speed of each clutch's shaft, in quarter
+rpm, negative when the shaft is the faster. With both defined (the page offers
+them as candidates):
+
+- **Gears** are learned from the shaft speed of whichever clutch is driving,
+  so hard driving and traffic count as well as a gentle run, a slipping clutch
+  cannot pass for a gear, and each gear is known to belong to one clutch.
+- **Each shift** also shows how much faster the engine turned than both shafts
+  at once (neither clutch holding it), how far the new clutch slipped after it
+  took over, and both clutches traced through the change.
+- **Clutches** lists slip in rpm by gear, light and under load, and by engine
+  speed; and every change of gear on each shaft with how long it took. A shaft
+  that sits between gears is where a gear that will not go in would show.
 
 To find them, "Find what a module answers" asks a module for a run of
 identifiers and lists the ones it has, with their bytes. Scan, change one thing
@@ -292,7 +321,10 @@ The tests run against the simulator, including the real serial code path
 through a pseudo-terminal and the web server over real HTTP. Wi-Fi switching
 is tested against a stand-in for NetworkManager, and updates against a stand-in
 for GitHub. The gear, shift and slip figures are tested against the simulated
-geared Focus, whose faults are known. Nothing here has been run against a real
+geared Focus, whose faults are known. The clutch figures were first seen on one
+recording from a real 2017 Focus, read about 1.3 times a second, and the
+arithmetic was checked against it; asking for several values in one request
+has only been run against the simulator. Otherwise nothing here has been run against a real
 adapter or vehicle yet, and Wi-Fi switching, the travelling hotspot, uploads
 and updates have not been run on a Pi yet.
 

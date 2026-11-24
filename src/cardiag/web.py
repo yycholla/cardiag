@@ -105,6 +105,8 @@ class _Handler(BaseHTTPRequestHandler):
         elif path == "/api/central":
             uploader = self.server.uploader
             self._json({"managed": True, **uploader.status()} if uploader else {"managed": False})
+        elif path == "/api/presets":
+            self._json(garage.presets(hub))
         elif path == "/api/maker":
             self._json(garage.maker_report(hub))
         elif path == "/api/discoveries":
@@ -152,13 +154,7 @@ class _Handler(BaseHTTPRequestHandler):
 
             self._job(change)
         elif path == "/api/record":
-            action = body.get("action")
-            if action == "start":
-                self._job(lambda: hub.start_recording(body.get("note")))
-            elif action == "stop":
-                self._job(hub.stop_recording)
-            else:
-                self._json({"error": "action must be 'start' or 'stop'"}, 400)
+            self._job(lambda: garage.record(hub, body))
         elif path == "/api/simulation":
             self._job(lambda: hub.set_simulation(body.get("vehicle")))
         elif path == "/api/network":

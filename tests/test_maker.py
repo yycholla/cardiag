@@ -33,7 +33,8 @@ def test_a_value_is_read_from_the_module_asked_and_no_other():
     assert obd.read_identifier(0x7E9, 0x1E12) == bytes([gear])
     raw = obd.read_identifier(0x7E9, 0x1EBB)  # third gear is on the odd clutch
     assert int.from_bytes(raw, "big", signed=True) / 4 == pytest.approx(slip, abs=0.25)
-    assert obd.read_identifier(0x7E9, 0x1EBC) == b"\x00\x00"  # the even clutch is not in use
+    other = int.from_bytes(obd.read_identifier(0x7E9, 0x1EBC), "big", signed=True) / 4
+    assert other > 100  # the even clutch holds fourth ready, so its shaft turns slower than the engine
     assert obd.read_identifier(0x7E9, 0x1234) is None  # refused: the module has no such value
     assert obd.read_identifier(0x7E8, 0x1E12) is None  # the engine computer does not have the gearbox's
 

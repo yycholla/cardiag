@@ -134,6 +134,7 @@ class Hub:
         self._elapsed = 0.0
         self._pass_at: float | None = None  # when the latest pass ended, on this machine's steady clock
         self._recording: dict | None = None
+        self._focus: dict | None = None  # the few values a recording asked for, while it runs
         self._recording_started = 0.0
         self._discovery: dict | None = None  # progress of a discovery run, for the page
         self._work: dict | None = None  # the run itself; touched by the worker thread only
@@ -306,8 +307,13 @@ class Hub:
     def read_monitors(self) -> list[dict]:
         return self._call(monitors_report)
 
-    def start_recording(self, note: str | None = None) -> dict:
-        self._call(lambda obd: self._begin_recording(note))
+    def start_recording(
+        self, note: str | None = None, *, pids: list[int] | None = None, maker: list[str] | None = None, preset: str = "all"
+    ) -> dict:
+        """Start recording. With `pids`, only those standard values are read until it stops, and with
+        `maker` only those maker-specific ones: fewer values, so each is read more often."""
+        focus = None if pids is None and maker is None else {"pids": pids, "maker": maker, "together": True}
+        self._call(lambda obd: self._begin_recording(note, focus, preset))
         return self.status()
 
     def stop_recording(self) -> dict:
@@ -468,14 +474,29 @@ class Hub:
             with self._changed:
                 watched = self._watched()
                 maker = list(self._maker)
+                focus = self._focus
                 if self._work:  # a discovery run reads a fixed few standard values and nothing else
-                    watched, maker = [pid for pid in CONTEXT_PIDS if pid in self._available], []
+                    watched, maker, focus = [pid for pid in CONTEXT_PIDS if pid in self._available], [], None
+                elif focus:  # a recording that asked for a few values reads only those
+                    if focus["pids"] is not None:
+                        watched = [pid for pid in focus["pids"] if pid in self._available]
+                    if focus["maker"] is not None:
+                        maker = [value for value in maker if value.key in focus["maker"]]
             samples = []
+            if focus and focus["together"] and 1 < len(watched) <= 6:
+                # One request for all of them, where the car allows it: a pass is then several times shorter.
+                together = obd.read_pids(watched)
+                if together is None:
+                    focus["together"] = False
+                else:
+                    now = time.time()
+                    samples += [(now, reading) for reading in together]
+                    watched = []
             for pid in watched:
                 reading = obd.read_pid(pid)
                 if reading is not None:
                     samples.append((time.time(), reading))
-            if watched and not samples:
+            if (watched or focus) and not samples and not maker:
                 silent_passes += 1
                 if silent_passes >= _SILENT_PASSES_ALLOWED:
                     raise NoVehicle("the vehicle stopped answering; is the ignition still on?")
@@ -486,7 +507,7 @@ class Hub:
                 number = value.decode(data) if data is not None else None
                 if number is not None:
                     samples.append((time.time(), Reading(value.key, value.name, number, value.unit, value.module)))
-            voltage = elm.voltage()
+            voltage = None if focus else elm.voltage()  # one request fewer where speed matters
             if voltage is not None:
                 samples.append(
                     (time.time(), Reading(VOLTAGE_KEY, "Battery voltage at the port", voltage, "V", 0))
@@ -513,7 +534,8 @@ class Hub:
 
             # A discovery run ignores the chosen rate, since every pause is identifiers not read, but it
             # still leaves a gap: an adapter that answers at once must not fill the disk or starve the page.
-            spare = (DISCOVERY_INTERVAL if self._work else self.interval) - (time.monotonic() - pass_started)
+            # A recording of a few chosen values is after speed too, so it does the same.
+            spare = (DISCOVERY_INTERVAL if self._work or focus else self.interval) - (time.monotonic() - pass_started)
             if spare > 0 and self._jobs.empty():
                 self._wake.wait(spare)
             self._wake.clear()
@@ -595,7 +617,7 @@ class Hub:
             self._version += 1
             self._changed.notify_all()
 
-    def _begin_recording(self, note: str | None) -> None:
+    def _begin_recording(self, note: str | None, focus: dict | None = None, preset: str = "all") -> None:
         if self._store is not None:
             return
         store = Store(self._db_path)
@@ -604,7 +626,8 @@ class Hub:
         )
         self._store, self._record_cycle = store, 0
         with self._changed:
-            self._recording = {"session": session, "note": note or ""}
+            self._recording = {"session": session, "note": note or "", "preset": preset}
+            self._focus = focus
             self._recording_started = time.monotonic()
             self._version += 1
             self._changed.notify_all()
@@ -617,6 +640,7 @@ class Hub:
         self._store = None
         with self._changed:
             self._recording = None
+            self._focus = None
             self._version += 1
             self._changed.notify_all()
         if self.on_recorded:
