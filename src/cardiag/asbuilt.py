@@ -380,17 +380,19 @@ def report(simulation: str | None = None, tree: dict[str, dict[str, str]] | None
     """Every block with its bytes and the settings mapped onto it, for the page.
 
     With a simulated car the made-up examples are added, so each kind of setting can be seen.
-    With a snapshot's tree, its bytes replace the capture's wherever it has the block.
+    With a snapshot's tree, only saved blocks are shown; missing reads are not filled from the capture.
     """
     modules, settings = MODULES, SETTINGS
     if simulation:
         modules, settings = modules + (EXAMPLE_MODULE,), settings + EXAMPLES
-    tree = tree or {}
     out = []
     for module in modules:
         blocks = []
+        saved = tree.get(module.name, {}) if tree is not None and module is not EXAMPLE_MODULE else None
         for did, number, captured in module.blocks:
-            data = tree.get(module.name, {}).get(did, captured)
+            if saved is not None and did not in saved:
+                continue
+            data = saved[did] if saved is not None else captured
             block = bytes.fromhex(data) if data else None
             mapped = []
             for setting in settings:
@@ -400,7 +402,7 @@ def report(simulation: str | None = None, tree: dict[str, dict[str, str]] | None
                     mapped.append({**setting.as_json(), "raw": raw, "text": setting.describe(raw)})
             blocks.append({
                 "did": did, "block": number, "hex": data, "withheld": data is None,
-                "origin": "snapshot" if did in tree.get(module.name, {}) else "capture",
+                "origin": "snapshot" if saved is not None else "capture",
                 "size": len(block) if block is not None else None, "settings": mapped,
             })
         out.append({

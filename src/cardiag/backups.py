@@ -175,11 +175,11 @@ def read_car(obd: Obd, names: tuple[str, ...] = READ_MODULES) -> tuple[dict[str,
         switched = False
         try:
             if module.bus == "MS":
-                if not (_command(obd, "STP53") and _command(obd, "STPBR125000")):
+                switched = _command(obd, "STP53")
+                if not switched or not _command(obd, "STPBR125000"):
                     problems.append({"module": name, "did": None,
                                      "reason": "the adapter cannot reach the MS bus (needs an OBDLink with STN commands)"})
                     continue
-                switched = True
             # Only this module's replies, and flow control addressed to it, so long blocks come through.
             for setting in (f"ATCRA{module.reply}", f"ATFCSH{module.request}", "ATFCSD300000", "ATFCSM1"):
                 if not _command(obd, setting):

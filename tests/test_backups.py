@@ -95,6 +95,22 @@ def test_a_plain_elm327_reads_body_control_but_not_the_cluster():
                          "reason": "the adapter cannot reach the MS bus (needs an OBDLink with STN commands)"}]
 
 
+def test_failed_ms_bitrate_restores_the_original_bus():
+    obd, sim = connected()
+    execute = sim._execute
+    sim._execute = lambda command: ["?"] if command == "STPBR125000" else execute(command)
+    blocks, problems = backups.read_car(obd)
+    assert set(blocks) == {"BdyCM"} and problems[0]["module"] == "IPC"
+    assert sim.bus == "HS" and obd.read_pid(0x0C) is not None
+
+
+def test_a_partial_snapshot_does_not_display_bundled_bytes():
+    report = asbuilt.report(tree={"IPC": {"DE11": "FFFF7F3E"}}, source="snapshot 1")
+    assert [(m["name"], b["did"], b["hex"]) for m in report["modules"] for b in m["blocks"]] == [
+        ("IPC", "DE11", "FFFF7F3E"),
+    ]
+
+
 def test_a_module_that_stays_locked_is_reported():
     obd, sim = connected()
     body = next(ecu for ecu in sim.vehicle.ecus if ecu.address == 0x72E)
