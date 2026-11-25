@@ -92,11 +92,12 @@ unplugged or the ignition is off, so it can be started first. The tabs:
   load per gear, and pull times through each speed span. "Start a drive
   capture" records a few values, so each is read more often.
 - **Configuration:** the 2017 Focus's configuration blocks as captured from
-  FORScan, and the settings mapped onto them so far, each with a control for
-  its kind (on/off, a list of choices, a number, several switches, raw bytes).
-  A change is only drafted: the page shows the block it would make and sends
-  nothing. Settings are added in `src/cardiag/asbuilt.py`; with a simulated car
-  the tab also shows made-up examples of every kind.
+  FORScan. The body control and cluster maps from [PR #10](https://github.com/yycholla/cardiag/pull/10)
+  decode the captured bytes, not the connected car. Imported entries are
+  read-only; unverified entries show raw bits instead of a value label.
+  Settings without a mapped bit range and the separate central configuration
+  aren't included. The key-in-ignition chime and made-up simulation examples
+  still let you draft a change locally; nothing is sent to the car.
 
 A recording can be made in one of four ways, picked beside the record button
 or on the Drive tab. Fewer values means each is read more often:

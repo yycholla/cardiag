@@ -428,7 +428,7 @@
     <section id="panel-config" hidden>
       <div class="card">
         <div class="head"><h2>Configuration</h2><span class="secondary small" id="config-source"></span></div>
-        <p class="secondary small">Settings kept in the car's modules, decoded from their configuration blocks. Changing a value here only drafts it: the page shows the block it would make, and nothing is sent to the car.</p>
+        <p class="secondary small">These values come from a saved capture, not the connected car. FORScan may list more than one interpretation of the same bits. Where a draft control is available, it previews the changed block without sending anything to the car.</p>
         <div class="toolbar">
           <select id="config-module" aria-label="Module"></select>
           <input id="config-search" type="search" autocapitalize="off" autocomplete="off" placeholder="Find a setting, module or identifier" aria-label="Find a setting">
@@ -2287,9 +2287,10 @@ function settingControl(module, block, setting, raw) {
 }
 
 function settingRow(module, block, setting) {
-  const raw = rawOf(setting, blockBytes(module, block));
   const was = rawOf(setting, bytesOf(block.hex));
-  const [ok, word] = STATUS_WORDS[setting.status] || [false, setting.status];
+  const raw = setting.read_only ? was : rawOf(setting, blockBytes(module, block));
+  const [ok, word] = setting.read_only ? [false, "FORScan reference · read only"]
+    : STATUS_WORDS[setting.status] || [false, setting.status];
   const where = module.request + " · " + block.did + " · byte " + (setting.byte + 1)
     + (setting.size > 1 ? "–" + (setting.byte + setting.size) : "")
     + " · mask " + setting.mask.toString(16).toUpperCase().padStart(setting.size * 2, "0");
@@ -2299,7 +2300,7 @@ function settingRow(module, block, setting) {
       el("span", { class: "small" }, describeSetting(setting, raw)),
       el("span", { class: "where" }, where),
       el("span", null, chip(ok, word), raw !== was ? chip(false, "Draft, was " + describeSetting(setting, was)) : null)),
-    el("div", { class: "control" }, settingControl(module, block, setting, raw)),
+    setting.read_only ? null : el("div", { class: "control" }, settingControl(module, block, setting, raw)),
     setting.evidence || setting.unknown ? el("div", { class: "why" },
       setting.evidence, setting.unknown ? " Not known: " + setting.unknown : null) : null);
 }
@@ -2398,7 +2399,7 @@ function renderConfig() {
     for (const block of module.blocks) {
       const bytes = drafts.get(blockKey(module, block));
       if (!bytes) continue;
-      const changed = block.settings.filter((setting) => rawOf(setting, bytes) !== rawOf(setting, bytesOf(block.hex)));
+      const changed = block.settings.filter((setting) => !setting.read_only && rawOf(setting, bytes) !== rawOf(setting, bytesOf(block.hex)));
       pending.push(el("tr", null,
         td(module.name + " " + block.did, "mono"),
         td(changed.map((setting) => setting.name).join(", ") || "Unnamed bits"),
@@ -2424,10 +2425,11 @@ async function loadConfig() {
   if (!config || config.examples !== result.examples) drafts.clear();
   config = result;
   const real = result.modules.filter((module) => module.name !== "EXAMPLE");
-  const settings = real.flatMap((module) => module.blocks.flatMap((block) => block.settings));
-  const blocks = real.reduce((sum, module) => sum + module.blocks.length, 0);
-  $("config-source").textContent = result.car + " · captured blocks · " + settings.length
-    + (settings.length === 1 ? " setting" : " settings") + " mapped in " + blocks + " blocks"
+  const blocks = real.flatMap((module) => module.blocks);
+  const mapped = blocks.filter((block) => block.settings.length);
+  const count = mapped.reduce((sum, block) => sum + block.settings.length, 0);
+  $("config-source").textContent = result.car + " · captured blocks · " + count
+    + (count === 1 ? " setting" : " settings") + " mapped across " + mapped.length + " of " + blocks.length + " blocks"
     + (result.examples ? " · plus made-up examples for the simulated car" : "");
   fillSelect($("config-module"), [["", "All modules"], ...result.modules.map((module) => [module.name, module.name + " · " + module.label])]);
   renderConfig();

@@ -1,0 +1,6226 @@
+[
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Alarm Sound Type",
+  "this_car": "Vehicle Horn",
+  "options": {
+   "0": "%ehicle Horn",
+   "1": "Security Horn"
+  },
+  "block": "DE00",
+  "byte": 2,
+  "shift": 7,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Ambient Light Sensor",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Enabled",
+   "1": "Disabled"
+  },
+  "block": "DE00",
+  "byte": 6,
+  "shift": 7,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Approach Light",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Enabled",
+   "1": "Disabled"
+  },
+  "block": "DE00",
+  "byte": 35,
+  "shift": 5,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Approach Light",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 35,
+  "shift": 5,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Auto Engine Idle Shutdown",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 12,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Auto Light Sensor",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 6,
+  "shift": 6,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Battery Capacity (Rated), A*h",
+  "this_car": "56",
+  "options": {},
+  "unmapped": "editor is not a list"
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Battery Charge Curve",
+  "this_car": "Battery less than 760 CCA",
+  "options": {
+   "1": "Battery less than 760 CCaA",
+   "2": "Battery greater than or equal io 760 CCA"
+  },
+  "block": "DE00",
+  "byte": 10,
+  "shift": 0,
+  "width": 2,
+  "car_value": 1,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Battery Type",
+  "this_car": "Incorrect value or not configured",
+  "options": {
+   "1": "H& AGM 704h 760 CCA 9MSM-10655-4*",
+   "2": "H7 AGM 804K 800 CCA DVET-10655-B*",
+   "7": "T4 434h 390 CCA 8G9M-10655-L*",
+   "8": "TS 524h 500 CCA BGE9N-10655-M*, AV2T-10655-B*, CH15-10655-C*",
+   "9": "TH 604N 590 CCA BEIN-10655-M*, AVZT-10655-C*, AR39-10655-0*",
+   "10": "T7 80Ah 700 CCA BGON-10655-P*, AVZ2T-10655-0*",
+   "12": "TS 564K 590 CCA CRIT-10655-B*",
+   "17": "TS 48Ah 500 CCA CR3T-10655-A*",
+   "18": "Incorrect value or not configured",
+   "20": "T IF 60Ah 590 CCA BYEN-10655-A%, DYAT-10655-A*",
+   "21": "T7 IF 75Ah 700 CCA BVEMN-10655-B*, CC1T-10655-B*",
+   "22": "T7 IF 75Ah 700 CCA GW4T-10655-B",
+   "28": "T7 IF 65Ah 760 CCA |XAT-10655-FA"
+  },
+  "block": "DE00",
+  "byte": 9,
+  "shift": 0,
+  "width": 5,
+  "car_value": 18,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Battery Type",
+  "this_car": "T5 56Ah 590 CCA",
+  "options": {
+   "1": "He AGM 704h 750 CCA",
+   "17": "TS 484h 500 CCA",
+   "18": "TS Sah 590 CCA",
+   "19": "T4 434h 390 CCA"
+  },
+  "block": "DE00",
+  "byte": 9,
+  "shift": 0,
+  "width": 5,
+  "car_value": 18,
+  "checked_against_car_value": false,
+  "verified_row": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Climate Control Type",
+  "this_car": "Manual A/C",
+  "options": {
+   "0": "Default",
+   "1": "Manual A4C",
+   "2": "Manual CAMN &/C",
+   "3": "EATC",
+   "4": "Mo AfC",
+   "5": "Type S",
+   "6": "Type 6"
+  },
+  "block": "DE00",
+  "byte": 20,
+  "shift": 3,
+  "width": 3,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Configuration for lost PKE Notification",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 1,
+  "shift": 7,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Crash Horn",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Mot Available",
+   "1": "Enabled",
+   "2": "Disabled",
+   "3": "Mot Used"
+  },
+  "block": "DE00",
+  "byte": 4,
+  "shift": 6,
+  "width": 2,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Defroster LED Control",
+  "this_car": "BCM",
+  "options": {
+   "0": "BCM",
+   "1": "EATC"
+  },
+  "block": "DE00",
+  "byte": 3,
+  "shift": 6,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Double Honk On Leaving Cabine",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 1,
+  "shift": 7,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Drip Wipe Pause Time",
+  "this_car": "0",
+  "options": {},
+  "unmapped": "editor is not a list"
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Drip Wipe Pause Time",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "20": "Seconds"
+  },
+  "block": "DE00",
+  "byte": 1,
+  "shift": 0,
+  "width": 5,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Froster Automatic Operation (FAO) Request",
+  "this_car": "Request Acknowledged",
+  "options": {
+   "0": "IGMNORE",
+   "1": "Request Acknowledged I"
+  },
+  "block": "DE00",
+  "byte": 2,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Fuel Level Sensor connection",
+  "this_car": "BCM",
+  "options": {
+   "0": "BCM",
+   "1": "Fuel Level Control Module {FLCR)"
+  },
+  "block": "DE00",
+  "byte": 19,
+  "shift": 6,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Fuel Supply",
+  "this_car": "DECOS",
+  "options": {
+   "1": "Standard",
+   "2": "DECOS"
+  },
+  "block": "DE00",
+  "byte": 16,
+  "shift": 0,
+  "width": 2,
+  "car_value": 2,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Fuel Supply",
+  "this_car": "DECOS",
+  "options": {
+   "0": "Default",
+   "1": "Standard",
+   "2": "DECOS",
+   "3": "Active Diesel"
+  },
+  "block": "DE00",
+  "byte": 16,
+  "shift": 0,
+  "width": 2,
+  "car_value": 2,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Fuel pump",
+  "this_car": "Present",
+  "options": {
+   "0": "Default",
+   "1": "Present",
+   "2": "Mot Present"
+  },
+  "block": "DE00",
+  "byte": 17,
+  "shift": 0,
+  "width": 2,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Heated Steering Wheel",
+  "this_car": "Disabled",
+  "options": {
+   "1": "Enabled",
+   "2": "Enabled with soft switch",
+   "3": "A [ P R [ (N RN ul SN S (RN [N S SR"
+  },
+  "block": "DE00",
+  "byte": 9,
+  "shift": 5,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Heated Steering Wheel",
+  "this_car": "Level 3 Heating",
+  "options": {
+   "0": "DEFALLT",
+   "1": "Level 1 Heating",
+   "2": "Level 2 Heating",
+   "3": "Level 3 Heating"
+  },
+  "block": "DE00",
+  "byte": 31,
+  "shift": 0,
+  "width": 2,
+  "car_value": 3,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Impact Trigger",
+  "this_car": "Not Present",
+  "options": {
+   "0": "Default",
+   "1": "Present",
+   "2": "Mot Present"
+  },
+  "block": "DE00",
+  "byte": 18,
+  "shift": 0,
+  "width": 2,
+  "car_value": 2,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Impact Trigger",
+  "this_car": "Not equipped",
+  "options": {
+   "0": "Incorrect value or not configured",
+   "1": "Equipped",
+   "2": "Mot equipped"
+  },
+  "block": "DE00",
+  "byte": 18,
+  "shift": 0,
+  "width": 2,
+  "car_value": 0,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Keypad",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 20,
+  "shift": 2,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "OBDII Protection Activation",
+  "this_car": "Disabled",
+  "options": {},
+  "unmapped": "editor is not a list"
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "One Press Global Open",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 7,
+  "shift": 6,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Profile Personalization",
+  "this_car": "Passive (Non-CGEA 1.3)",
+  "options": {
+   "0": "Passive (Mon-CGEA 1.3)",
+   "1": "Manual {CGEA 1.3)"
+  },
+  "block": "DE00",
+  "byte": 20,
+  "shift": 6,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "RVC Connection Type",
+  "this_car": "LIN Connection",
+  "options": {
+   "0": "CaAl Connection",
+   "1": "LIN Connection"
+  },
+  "block": "DE00",
+  "byte": 25,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Rain Sensor Car Code",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "10": "IR Protected",
+   "13": "CMaX Standard Windshield"
+  },
+  "block": "DE00",
+  "byte": 5,
+  "shift": 0,
+  "width": 4,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Rated Battery Capacity",
+  "this_car": "T5 56Ah 590 CCA",
+  "options": {
+   "43": "T4 434h 390 CCA",
+   "48": "TS 484h 500 CCA",
+   "56": "TS 3640 590 CCA",
+   "70": "HE AGM 704h 750 CCA"
+  },
+  "block": "DE00",
+  "byte": 11,
+  "shift": 0,
+  "width": 7,
+  "car_value": 56,
+  "checked_against_car_value": false,
+  "verified_row": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Rear Defroster Work Time, min",
+  "this_car": "0",
+  "options": {
+   "1": "Battery less than 760 CCaA",
+   "2": "Battery greater than or equal io 760 CCA"
+  },
+  "block": "DE00",
+  "byte": 10,
+  "shift": 0,
+  "width": 2,
+  "car_value": 2,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Rear Window Defroster",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Enabled",
+   "1": "Disabled"
+  },
+  "block": "DE00",
+  "byte": 3,
+  "shift": 4,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Remote Start",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE05",
+  "byte": 0,
+  "shift": 0,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Smart Front Wiper",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 0,
+  "shift": 1,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Steering angle sensor",
+  "this_car": "Present",
+  "options": {
+   "0": "Mot Present",
+   "1": "Present"
+  },
+  "block": "DE00",
+  "byte": 25,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Stop and Turn Lamps Type",
+  "this_car": "Separated Stop and Turn Lights",
+  "options": {
+   "0": "Separated Stop and Turn Lights",
+   "1": "Cambined Stop and Turn Lights"
+  },
+  "block": "DE00",
+  "byte": 42,
+  "shift": 0,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "TCU Gateway Type",
+  "this_car": "GWM",
+  "options": {
+   "0": "G",
+   "1": "1IPC"
+  },
+  "block": "DE00",
+  "byte": 20,
+  "shift": 7,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "TPM - Auto Learn",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE02",
+  "byte": 0,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "TPM - Market",
+  "this_car": "Combined North America / Rest Of The World",
+  "options": {
+   "0": "Maorth America",
+   "1": "Combined Morth America f Rest Of The \\World"
+  },
+  "block": "DE00",
+  "byte": 3,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "TPM - Number of tires",
+  "this_car": "4",
+  "options": {},
+  "unmapped": "editor is not a list"
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "TPM - Placard Pressure Front, psi",
+  "this_car": "36",
+  "options": {},
+  "unmapped": "editor is not a list"
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "TPM - Placard Pressure Rear, psi",
+  "this_car": "36",
+  "options": {},
+  "unmapped": "editor is not a list"
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "TPM - Sensor Auto Range",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE02",
+  "byte": 1,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "TPM - Sensor Pressure Range",
+  "this_car": "Low",
+  "options": {
+   "0": "Low",
+   "1": "High"
+  },
+  "block": "DE03",
+  "byte": 1,
+  "shift": 0,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "TPM - Sensor type",
+  "this_car": "MY09",
+  "options": {
+   "0": "MY0&",
+   "1": "M09",
+   "2": "MY15",
+   "3": "Heavy Truck"
+  },
+  "block": "DE03",
+  "byte": 0,
+  "shift": 0,
+  "width": 2,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "TPM - Signal Receiver",
+  "this_car": "BCM",
+  "options": {
+   "0": "BCM",
+   "1": "kMM",
+   "2": "IRX"
+  },
+  "block": "DE00",
+  "byte": 3,
+  "shift": 0,
+  "width": 2,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Tailgate Timer",
+  "this_car": "150 ms",
+  "options": {},
+  "unmapped": "editor is not a list"
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Trunk Illumination",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 2,
+  "shift": 1,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Trunk Illumination",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 2,
+  "shift": 1,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Unlock HVAC Purge",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 18,
+  "shift": 6,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Wake Up Active",
+  "this_car": "Gas",
+  "options": {
+   "0": "Gas",
+   "20": "Focus BEY [/ CMAX"
+  },
+  "block": "DE00",
+  "byte": 8,
+  "shift": 0,
+  "width": 5,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Wash Activation",
+  "this_car": "Active in Accessory",
+  "options": {
+   "0": "Active in AcCessary",
+   "1": "Mot Active in Accessory"
+  },
+  "block": "DE00",
+  "byte": 0,
+  "shift": 3,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Wash Activation in Accessory mode",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Enabled",
+   "1": "Disabled"
+  },
+  "block": "DE00",
+  "byte": 0,
+  "shift": 3,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Wash Before Wipe Time",
+  "this_car": "300 ms",
+  "options": {},
+  "unmapped": "editor is not a list"
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Washer Fluid Sensor",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 12,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Wiper Auto Park",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 16,
+  "shift": 7,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "BdyCM",
+  "address": "726",
+  "name": "Wiper Type",
+  "this_car": "Smart",
+  "options": {
+   "0": "Conwventional",
+   "1": "5Smart"
+  },
+  "block": "DE00",
+  "byte": 0,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Adaptive Cruise Control/Forward collision warning",
+  "this_car": "Enabled",
+  "options": {
+   "0": "abled s",
+   "1": "hled"
+  },
+  "block": "DE1B",
+  "byte": 0,
+  "shift": 1,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Adaptive Speed Limiter Device",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 0,
+  "shift": 0,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Auto High Beam Sensitivity Menu",
+  "this_car": "No Menu (default low)",
+  "options": {
+   "0": "Mo Menu {default low)",
+   "1": "Mo Menu (default normal)",
+   "2": "With menu"
+  },
+  "block": "DE07",
+  "byte": 0,
+  "shift": 0,
+  "width": 2,
+  "car_value": 0,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Brake Transmission Shift Interlock",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 1,
+  "shift": 7,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Adaptive Cruise Control / Forward Collision Warning",
+  "this_car": "Enabled",
+  "options": {
+   "0": "| Chimes - Adaptive Cruise Contral / Forward Callision \\Warning |"
+  },
+  "block": "DE11",
+  "byte": 1,
+  "shift": 3,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Adjustable Speed Limiter Diesel",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled I"
+  },
+  "block": "DE11",
+  "byte": 1,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Alarm",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 2,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Beltminder",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 1,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Cross Traffic Alert",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 3,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Door Open",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 2,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Engine On",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enahled Chimes - Engine On"
+  },
+  "block": "DE11",
+  "byte": 3,
+  "shift": 0,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Hard Warning",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 0,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Headlamps On",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 0,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Hill Start Assist",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 1,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Home Safe Light",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 0,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Ignition Off",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 1,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Information",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 0,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Key In Ignition",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 2,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Key Left In Car",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 2,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Key Outside Car",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 1,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Liftgate",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 2,
+  "shift": 2,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Low Fuel",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 0,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Mechanical Park Brake",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 2,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Memory Seat",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 1,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Overspeed",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 1,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - PRNDL Not In Park",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 0,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Parking Brake",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 0,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Select Shift Press Clutch",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 2,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Select Shift Select Neutral",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 2,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Select Shift Turn Ignition Off",
+  "this_car": "Enabled",
+  "options": {
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 2,
+  "shift": 3,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Chimes - Soft Warning",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE11",
+  "byte": 0,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Climate Control",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE23",
+  "byte": 0,
+  "shift": 3,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Compass",
+  "this_car": "GPS Compass",
+  "options": {
+   "0": "Mone",
+   "1": "LIM Compass",
+   "2": "GPS Compass",
+   "3": "MFDS GPS Compass"
+  },
+  "block": "DE07",
+  "byte": 0,
+  "shift": 2,
+  "width": 2,
+  "car_value": 2,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Cross Traffic Alert",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 2,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Cruise Control",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 0,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Deflation Detection System",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 0,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Alert System (DAS)",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 0,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Beltminder",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1A",
+  "byte": 0,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Seat",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE23",
+  "byte": 1,
+  "shift": 1,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Alarm",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 2,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Ambient Light",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 2,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Auto High Beam",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 1,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Auxiliary Heater",
+  "this_car": "Enabled",
+  "options": {
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 2,
+  "shift": 5,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Blind Spot Monitoring",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled ."
+  },
+  "block": "DE22",
+  "byte": 1,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Compass",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 2,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Cross Traffic Alert",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled I"
+  },
+  "block": "DE21",
+  "byte": 0,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Cruise Control",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE21",
+  "byte": 1,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Daytime Running Lights",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "\u201chabled ."
+  },
+  "block": "DE21",
+  "byte": 0,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Deflation Detection System",
+  "this_car": "Enabled",
+  "options": {
+   "0": "abled",
+   "1": "bled B"
+  },
+  "block": "DE22",
+  "byte": 0,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Dimming",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 2,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Driver Monitor",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 0,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - ESP",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 1,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Forward Collision Alert",
+  "this_car": "Enabled",
+  "options": {
+   "0": "isabled",
+   "1": "nabled -"
+  },
+  "block": "DE22",
+  "byte": 3,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Hill Start Assist",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled I"
+  },
+  "block": "DE22",
+  "byte": 1,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Home Light",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 2,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Lane Assist Mode",
+  "this_car": "Enabled",
+  "options": {
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 0,
+  "shift": 4,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Lane Departure",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 0,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Lane Departure Warning Intensity",
+  "this_car": "Enabled",
+  "options": {
+   "0": "] E\u2014\u2014\u2014...,",
+   "1": "| Driver Settings Menu - Lane Departure \\Warning Intensity |"
+  },
+  "block": "DE22",
+  "byte": 0,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Measurement Units for Europe",
+  "this_car": "Enabled",
+  "options": {
+   "0": "hled",
+   "1": "a]/=ls| -"
+  },
+  "block": "DE22",
+  "byte": 3,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - MyKey",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 0,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - MyKey Miles",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 1,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - MyKeys Programmed",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled I"
+  },
+  "block": "DE22",
+  "byte": 1,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Navigation Info",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 2,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Parking Heater",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 2,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Rain Sensing",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE05",
+  "byte": 2,
+  "shift": 5,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Rain and Light sensor",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled ."
+  },
+  "block": "DE22",
+  "byte": 1,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Seat Belts",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 0,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Stop / Start",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE21",
+  "byte": 0,
+  "shift": 3,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Tire Pressure Monitor",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled .",
+   "1": "Enabled"
+  },
+  "block": "DE22",
+  "byte": 0,
+  "shift": 2,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Traffic Side",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE05",
+  "byte": 2,
+  "shift": 3,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Traffic Sign Recognition",
+  "this_car": "Enabled",
+  "options": {
+   "0": "sabled",
+   "1": "1abled -"
+  },
+  "block": "DE22",
+  "byte": 3,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Traffic Sign Recognition Overspeed Warning",
+  "this_car": "Enabled",
+  "options": {
+   "0": "river Settings Menu - Traffic Sign Recognition Overspeed \\Warning"
+  },
+  "block": "DE22",
+  "byte": 3,
+  "shift": 2,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Driver Settings Menu - Vehicle Graphics",
+  "this_car": "Enabled",
+  "options": {
+   "1": "Enabled"
+  },
+  "block": "DE21",
+  "byte": 0,
+  "shift": 4,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "ECO Mode",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE02",
+  "byte": 0,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "ECO Scout",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 0,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "External Air Temperature",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE02",
+  "byte": 1,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Ford Logo (MFD 3)",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE05",
+  "byte": 2,
+  "shift": 4,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Ford ST",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 1,
+  "shift": 6,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Fuel metering in gallons",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE02",
+  "byte": 1,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Fuel per hour",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE02",
+  "byte": 1,
+  "shift": 4,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Heated Steering Wheel on Remote Start",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE23",
+  "byte": 0,
+  "shift": 7,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Ice indicator",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE02",
+  "byte": 1,
+  "shift": 2,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - ABS",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 0,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Airbag Malfunction (RIL)",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 0,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Auto High Beam Control",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 3,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Beltminder",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 0,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Blind Spot Monitoring",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 2,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Charge System Malfunction",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 0,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Cruise Control",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 1,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Diesel Pre-Heat",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 2,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Distance Alert",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 0,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Engine Malfunction (MIL)",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 0,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Forward Collision Warning",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 3,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Front Fog",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 1,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Gear Shift",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 0,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - High Beam",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 0,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Lane Departure Warning",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 3,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Left Turn",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 1,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Lights On",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 1,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Low Fuel Reminder",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 1,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Parking Brake",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 0,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Rear Fog",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 1,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Right Turn",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 1,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Stability Control",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 2,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Stability Control Off",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 2,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Stop / Start",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 1,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - TCS Hill Mode",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 3,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Indicators - Tire Pressure Monitor",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE10",
+  "byte": 2,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Instant Fuel Economy Display",
+  "this_car": "Bar",
+  "options": {
+   "0": "Bar",
+   "1": "Mumeric"
+  },
+  "block": "DE02",
+  "byte": 1,
+  "shift": 5,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Keyless Control In Settings",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE05",
+  "byte": 1,
+  "shift": 4,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Lane Centering Aid",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 1,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Lane Departure Warning",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 1,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Lane Keeping Aid",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 1,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Arabic",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 2,
+  "shift": 4,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Chinese Simplified",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 3,
+  "shift": 4,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Chinese Traditional",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 3,
+  "shift": 7,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Czech",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 2,
+  "shift": 1,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Danish",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 2,
+  "shift": 2,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Dutch",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 1,
+  "shift": 4,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - English Australian",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 0,
+  "shift": 3,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - English UK",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 0,
+  "shift": 2,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - English US",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 0,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - French",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 0,
+  "shift": 7,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - French Canada",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 0,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - German",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 0,
+  "shift": 4,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Italian",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 0,
+  "shift": 5,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Japanese",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 3,
+  "shift": 5,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Korean",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 3,
+  "shift": 6,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Norwegian",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 2,
+  "shift": 3,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Polish",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 1,
+  "shift": 5,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Portuguese",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 2,
+  "shift": 0,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Portuguese Brazil",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 1,
+  "shift": 7,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Russian",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 1,
+  "shift": 3,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Spanish",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 1,
+  "shift": 1,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Spanish Mexico",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 1,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Swedish",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 1,
+  "shift": 6,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Languages - Turkish",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 1,
+  "shift": 2,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Menu - Languages",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE00",
+  "byte": 0,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #100 Supplementary heater off",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE12",
+  "byte": 0,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #1015 Diesel Engine Start Pending",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled ."
+  },
+  "block": "DE14",
+  "byte": 1,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #102 Supplementary heater on",
+  "this_car": "Enabled",
+  "options": {
+   "1": "Enabled"
+  },
+  "block": "DE12",
+  "byte": 0,
+  "shift": 1,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #201 High engine temperature",
+  "this_car": "Enabled",
+  "options": {
+   "1": "Enabled"
+  },
+  "block": "DE12",
+  "byte": 0,
+  "shift": 2,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #203 Washer fluid Level Low",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE12",
+  "byte": 0,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #204 Brake fluid Level Low",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE12",
+  "byte": 0,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #212 Driver door open",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE12",
+  "byte": 0,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #213 Driver side rear door open",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled I"
+  },
+  "block": "DE12",
+  "byte": 0,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #214 Passenger door open",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE12",
+  "byte": 0,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #215 Passenger side rear door open",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "\u201chabled ."
+  },
+  "block": "DE12",
+  "byte": 1,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #216 Boot / Trunk open",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE12",
+  "byte": 1,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #217 Bonnet / Hood open",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE12",
+  "byte": 1,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #218d Traction control deactivated",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "\u201chabled ."
+  },
+  "block": "DE15",
+  "byte": 3,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #245 Passive keys - key in trunk",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled l"
+  },
+  "block": "DE12",
+  "byte": 1,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #250 Powertrain cooling",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE16",
+  "byte": 0,
+  "shift": 6,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #254 Oil Level Low",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE12",
+  "byte": 1,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #350 Electric Parking Brake (EPB) warning - total failure",
+  "this_car": "Enabled",
+  "options": {
+   "0": "lessages - #3950 Electric Parking Brake (EPR) warning - total failure"
+  },
+  "block": "DE12",
+  "byte": 1,
+  "shift": 5,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #351c Electric Parking Brake (EPB) warning - park brake not app(lied)",
+  "this_car": "Enabled",
+  "options": {
+   "25": "#351c Electric Parking Brake (EPB) warning - park brake not app"
+  },
+  "block": "DE16",
+  "byte": 0,
+  "shift": 0,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #365 TCM - gear engagement info at low temperature",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Ylessages - #365 TCM - gear engagement info at low temperature"
+  },
+  "block": "DE12",
+  "byte": 1,
+  "shift": 6,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #366 TCM - press brake pedal",
+  "this_car": "Enabled",
+  "options": {
+   "1": "Enabled"
+  },
+  "block": "DE12",
+  "byte": 1,
+  "shift": 7,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #368 Water in Fuel",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE12",
+  "byte": 2,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #400 Tire Pressure Monitor System (TPMS) malfunction",
+  "this_car": "Enabled",
+  "options": {
+   "0": "lessages - #400 Tire Pressure Monitor System (TPMS) malfunction"
+  },
+  "block": "DE12",
+  "byte": 2,
+  "shift": 1,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #411 Forward Alert (FA) failure - not recoverable",
+  "this_car": "Enabled",
+  "options": {
+   "0": "| Messages - #411 Forward Alert (FA) failure - not recaverable |"
+  },
+  "block": "DE12",
+  "byte": 2,
+  "shift": 2,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #412 Adapive Cruse Control (ACC) Sensor failure - to be cleaned",
+  "this_car": "Enabled",
+  "options": {
+   "0": "ges - #412 Adapive Cruse Contral (ACC) Sensor failure - to be clear"
+  },
+  "block": "DE12",
+  "byte": 2,
+  "shift": 3,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #413 Forward Alert (FA) failure - recoverable",
+  "this_car": "Enabled",
+  "options": {
+   "0": "d > B B9",
+   "1": "| Messages - #413 Forward Alert (FA) failure - recoverable |"
+  },
+  "block": "DE12",
+  "byte": 2,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #414 Adapive Cruse Control (ACC) Service - not recoverable",
+  "this_car": "Enabled",
+  "options": {
+   "0": "sages - #414 Adapive Cruse Confrol {ACC) Service - not recoverable"
+  },
+  "block": "DE12",
+  "byte": 2,
+  "shift": 5,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #415 Adapive Cruse Control (ACC) and Forward Alert (FA) failure",
+  "this_car": "Enabled",
+  "options": {
+   "0": "iges - #415 Adapive Cruse Confrol {ACC) and Forward Alert (FA) fail"
+  },
+  "block": "DE12",
+  "byte": 2,
+  "shift": 6,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #419 Alarm triggered",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE12",
+  "byte": 2,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #423 Immobilizer active",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE12",
+  "byte": 3,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #427 Hill Start Assist (HSA) active",
+  "this_car": "Enabled",
+  "options": {
+   "0": "isabled",
+   "1": "nabled -"
+  },
+  "block": "DE12",
+  "byte": 3,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #428 Hill Start Assist (HSA) release",
+  "this_car": "Enabled",
+  "options": {
+   "0": "sabled",
+   "1": "1abled -"
+  },
+  "block": "DE12",
+  "byte": 3,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #429 Hill Start Assist (HSA) not available",
+  "this_car": "Enabled",
+  "options": {
+   "0": "led - > 69\u2014 @",
+   "1": "| Messages - #4209 Hill Start Assist (HSA) not available |"
+  },
+  "block": "DE12",
+  "byte": 3,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #431 Headlamp Low Beam Bulb Fault",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled ."
+  },
+  "block": "DE12",
+  "byte": 3,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #432 Rear Fog Lamps Bulb Fault",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled I"
+  },
+  "block": "DE12",
+  "byte": 3,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #433 Brake/Stop Lamp Bulb Fault",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled I"
+  },
+  "block": "DE12",
+  "byte": 3,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #434 Position Lamps Bulb Fault",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled I"
+  },
+  "block": "DE12",
+  "byte": 3,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #435 Head Light System Bulb Fault",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled ."
+  },
+  "block": "DE13",
+  "byte": 0,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #436 Trailer Stop Lamps Bulb Fault",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "\u201chabled ."
+  },
+  "block": "DE13",
+  "byte": 0,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #437 Trailer Turn Signal Bulb Fault",
+  "this_car": "Enabled",
+  "options": {
+   "0": "isabled",
+   "1": "nabled -"
+  },
+  "block": "DE13",
+  "byte": 0,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #438 Adaptive Cruise Control (ACC) failure - recoverable",
+  "this_car": "Enabled",
+  "options": {
+   "0": "essages - #4358 Adaptive Cruise Control (ACC) failure - recoverable"
+  },
+  "block": "DE13",
+  "byte": 0,
+  "shift": 3,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #440 Engine malfunction - soft warning",
+  "this_car": "Enabled",
+  "options": {
+   "0": "abled",
+   "1": "bled B"
+  },
+  "block": "DE13",
+  "byte": 0,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #440b Engine malfunction - hard warning",
+  "this_car": "Enabled",
+  "options": {
+   "0": "bled",
+   "1": "bled e"
+  },
+  "block": "DE16",
+  "byte": 0,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #441 IVDC Malfunction",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE13",
+  "byte": 0,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #449 Oil service Indication",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE13",
+  "byte": 0,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #455 Charging status - overvoltage",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "\u201chabled ."
+  },
+  "block": "DE13",
+  "byte": 0,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #456 Charging status - battery low",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled .",
+   "1": "\u201chabled"
+  },
+  "block": "DE13",
+  "byte": 1,
+  "shift": 0,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #466 Adaptive Cruise Control (CADS) service required",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Yessages - #4656 Adaptive Cruise Confrol (CADS) service required"
+  },
+  "block": "DE16",
+  "byte": 0,
+  "shift": 5,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #469 Service Indication - oil change",
+  "this_car": "Enabled",
+  "options": {
+   "0": "sabled",
+   "1": "1abled -"
+  },
+  "block": "DE13",
+  "byte": 1,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #474 Tire Pressure Monitoring System (TPMS) sensors not dete(cted)",
+  "this_car": "Enabled",
+  "options": {
+   "5": "#474 Tire Pressure Monitoring System (TPMS) sensors not detec"
+  },
+  "block": "DE13",
+  "byte": 1,
+  "shift": 2,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #476 Alarm System service required",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "\u201chabled ."
+  },
+  "block": "DE13",
+  "byte": 1,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #477 Electric Parking Brake (EPB) - pre-conditions for drive awa(y)",
+  "this_car": "Enabled",
+  "options": {
+   "0": "#477 Electric Parking Brake (EPB) - pre-conditions for drive away no",
+   "1": "..."
+  },
+  "block": "DE13",
+  "byte": 1,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #478 Electric Parking Brake (EPB) - releasing by switch and driv(e)",
+  "this_car": "Enabled",
+  "options": {
+   "0": "\u201clectric Parking Brake (EPB) - releasing by switch and driver present r",
+   "1": "..."
+  },
+  "block": "DE13",
+  "byte": 1,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #479 Electric Parking Brake (EPB) - service required",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Messages - #479 Electric Parking Brake {(EFB) - service required"
+  },
+  "block": "DE13",
+  "byte": 1,
+  "shift": 6,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #480 Electric Parking Brake (EPB) - park brake not fully released",
+  "this_car": "Enabled",
+  "options": {
+   "0": "ages - #480 Electric Parking Brake (EPB) - park brake not fully release"
+  },
+  "block": "DE13",
+  "byte": 1,
+  "shift": 7,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #485 Automated Transmission warning - press brake",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Messages - #485 Automated Transmission warning - press brake"
+  },
+  "block": "DE13",
+  "byte": 2,
+  "shift": 2,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #487",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE13",
+  "byte": 2,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #488 Automated Transmission warning - not in Park",
+  "this_car": "Enabled",
+  "options": {
+   "0": "| Messages - #488 sutomated Transmission warning - not in Park"
+  },
+  "block": "DE13",
+  "byte": 2,
+  "shift": 3,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #491 Electric Parking Brake (EPB) Status - applied (if telltale blo\u2026)",
+  "this_car": "Enabled",
+  "options": {
+   "0": "#491 Electric Parking Brake (EPB) Status - applied {if tellitale bloch"
+  },
+  "block": "DE13",
+  "byte": 2,
+  "shift": 4,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #492 Electric Parking Brake (EPB) Status - released (if telltale bl\u2026)",
+  "this_car": "Enabled",
+  "options": {
+   "0": "#492 Electric Parking Brake (EPR) Status - released (if telltale bloc"
+  },
+  "block": "DE13",
+  "byte": 2,
+  "shift": 5,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #493 Tire Pressure Monitoring System (TPMS) global warning",
+  "this_car": "Enabled",
+  "options": {
+   "0": "zages - #493 Tire Pressure Monitoring System (TPMS) global warnin"
+  },
+  "block": "DE13",
+  "byte": 2,
+  "shift": 6,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #494 Keyless Vehicle (KV) - steering malfunction 1",
+  "this_car": "Enabled",
+  "options": {
+   "0": "| Messages - #494 Keyless Vehicle (KY) - steering malfunction 1 |"
+  },
+  "block": "DE13",
+  "byte": 2,
+  "shift": 7,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #495 Keyless Vehicle (KV) - steering malfunction 2",
+  "this_car": "Enabled",
+  "options": {
+   "0": "| Messages - #495 Keyless Yehicle (KY) - steering malfunction 2 |"
+  },
+  "block": "DE13",
+  "byte": 3,
+  "shift": 0,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #496 Keyless Vehicle (KV) - key not detected",
+  "this_car": "Enabled",
+  "options": {
+   "0": "1|",
+   "1": "d I"
+  },
+  "block": "DE13",
+  "byte": 3,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #497 Driver Door Open",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE13",
+  "byte": 3,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #498 Keyless Vehicle (KV) - key outside car",
+  "this_car": "Enabled",
+  "options": {
+   "0": "=w|",
+   "1": "1| -"
+  },
+  "block": "DE13",
+  "byte": 3,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #499 Keyless Vehicle (KV) - press brake",
+  "this_car": "Enabled",
+  "options": {
+   "0": "bled",
+   "1": "bled e"
+  },
+  "block": "DE13",
+  "byte": 3,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #500 Keyless Vehicle (KV) - steering locked",
+  "this_car": "Enabled",
+  "options": {
+   "0": "=] \u2014\u2014",
+   "1": "| Messages - #9300 Keyless Wehicle (k) - steering locked |"
+  },
+  "block": "DE13",
+  "byte": 3,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #502 Keyless Vehicle (KV) - press clutch",
+  "this_car": "Enabled",
+  "options": {
+   "0": "hled",
+   "1": "a]/=ls| -"
+  },
+  "block": "DE13",
+  "byte": 3,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #512 Deflation Detection System (DDS) Warning",
+  "this_car": "Enabled",
+  "options": {
+   "0": "\u00bb EE\u2014\u2014\u2014\u2014\u2014\u2014\u2014",
+   "1": "| Messages - #3512 Deflation Detection System (DDS) Warning |"
+  },
+  "block": "DE13",
+  "byte": 3,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #513 Deflation Detection System (DDS) Fault",
+  "this_car": "Enabled",
+  "options": {
+   "0": "",
+   "1": "| Messages - #5132 Deflation Detection System (DDS) Fault |"
+  },
+  "block": "DE14",
+  "byte": 0,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #516 Driver door open - 2",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE14",
+  "byte": 0,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #517 Passenger door open - 2",
+  "this_car": "Enabled",
+  "options": {
+   "1": "Enabled"
+  },
+  "block": "DE14",
+  "byte": 0,
+  "shift": 2,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #518 Driver side rear door open - 2",
+  "this_car": "Enabled",
+  "options": {
+   "0": "isabled",
+   "1": "nabled -"
+  },
+  "block": "DE14",
+  "byte": 0,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #519 Passenger side rear door open - 2",
+  "this_car": "Enabled",
+  "options": {
+   "0": "abled",
+   "1": "bled B"
+  },
+  "block": "DE14",
+  "byte": 0,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #520 Boot / Trunk open - 2",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE14",
+  "byte": 0,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #521 Bonnet / Hood open - 2",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE14",
+  "byte": 0,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #522 Keyless Vehicle (KV) - Change passive key battery",
+  "this_car": "Enabled",
+  "options": {
+   "0": "lessages - #3522 Keyless Wehicle ) - Change passive key battery"
+  },
+  "block": "DE14",
+  "byte": 0,
+  "shift": 7,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #530 Restraints indicator",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE14",
+  "byte": 1,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #531 MPS6 Transmission Heat protection - 0",
+  "this_car": "Enabled",
+  "options": {
+   "0": "led S",
+   "1": "| Messages - #3531 MPSA Transmission Heat protection -0 |"
+  },
+  "block": "DE14",
+  "byte": 1,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #532 MPS6 Transmission Heat protection - 1",
+  "this_car": "Enabled",
+  "options": {
+   "0": "led",
+   "1": "o e"
+  },
+  "block": "DE14",
+  "byte": 1,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #533 MPS6 Transmission Heat protection - 2",
+  "this_car": "Enabled",
+  "options": {
+   "0": "led",
+   "1": "o e"
+  },
+  "block": "DE14",
+  "byte": 1,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #534 MPS6 Transmission Heat protection - 3",
+  "this_car": "Enabled",
+  "options": {
+   "0": "led S",
+   "1": "| Messages - #5324 MPSA Transmission Heat protection -2 |"
+  },
+  "block": "DE14",
+  "byte": 1,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #567 Immobilizer malfunction",
+  "this_car": "Enabled",
+  "options": {
+   "1": "Enabled"
+  },
+  "block": "DE14",
+  "byte": 2,
+  "shift": 0,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #577 Keyless Vehicle (KV) - Engine preheating (Diesel)",
+  "this_car": "Enabled",
+  "options": {
+   "0": "lessages - #5977 Keyless Yehicle (K% - Engine preheating (Diesel)"
+  },
+  "block": "DE14",
+  "byte": 2,
+  "shift": 1,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #582 Hill Start Assist (HSA) release - chime",
+  "this_car": "Enabled",
+  "options": {
+   "0": "1|",
+   "1": "d I"
+  },
+  "block": "DE14",
+  "byte": 2,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #584 Park assistance failure",
+  "this_car": "Enabled",
+  "options": {
+   "1": "Enabled"
+  },
+  "block": "DE14",
+  "byte": 2,
+  "shift": 3,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #586 Mini liftgate open",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE14",
+  "byte": 2,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #588 Mini liftgate open",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE14",
+  "byte": 2,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #589 Power operated tailgate malfunction",
+  "this_car": "Enabled",
+  "options": {
+   "0": "hled",
+   "1": "a]/=ls| -"
+  },
+  "block": "DE14",
+  "byte": 2,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #591 Automated Transmission - limited function",
+  "this_car": "Enabled",
+  "options": {
+   "0": "i I\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014",
+   "1": "| Messages - #5391 Automated Transmission - limited function |"
+  },
+  "block": "DE14",
+  "byte": 2,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #600 Electric Power Assist Steering (EPAS) - steering assist not\u2026",
+  "this_car": "Enabled",
+  "options": {
+   "0": "#6000 Electric Power Assist Steering (EPAS) - steering assist not av:",
+   "1": "..."
+  },
+  "block": "DE14",
+  "byte": 3,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #601 Electric Power Assist Steering (EPAS) - increased friction",
+  "this_car": "Enabled",
+  "options": {
+   "0": "ages - #601 Electric Power Assist Steering (EPAS) - increased frictior"
+  },
+  "block": "DE14",
+  "byte": 3,
+  "shift": 1,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #602 Electric Power Assist Steering (EPAS) - malfunction",
+  "this_car": "Enabled",
+  "options": {
+   "0": "essages - #6002 Electric Power Assist Steering (EPAS) - malfunction"
+  },
+  "block": "DE14",
+  "byte": 3,
+  "shift": 2,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #606 Brake Pad Wear",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE14",
+  "byte": 3,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #607 Low Brake Vacuum",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE14",
+  "byte": 3,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #608 Secondary brake not available",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "\u201chabled ."
+  },
+  "block": "DE14",
+  "byte": 3,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #609 Trailer Sway",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE14",
+  "byte": 3,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #610 Blind Spot Monitoring (BLIS) - right sensor blocked",
+  "this_car": "Enabled",
+  "options": {
+   "0": "essages - #610 Blind Spot Monitoring (BLIS) - right sensor blocked"
+  },
+  "block": "DE14",
+  "byte": 3,
+  "shift": 7,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #611 Blind Spot Monitoring (BLIS) - left sensor blocked",
+  "this_car": "Enabled",
+  "options": {
+   "0": "lessages - #611 Blind Spot Monitoring (BLIS) - left sensor blocked"
+  },
+  "block": "DE15",
+  "byte": 0,
+  "shift": 0,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #612 Blind Spot Monitoring (BLIS) - right sensor malfunction",
+  "this_car": "Enabled",
+  "options": {
+   "0": "sages - #6512 Blind Spot Monitoring (BLIS) - right sensor malfunction"
+  },
+  "block": "DE15",
+  "byte": 0,
+  "shift": 1,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #613 Blind Spot Monitoring (BLIS) - left sensor malfunction",
+  "this_car": "Enabled",
+  "options": {
+   "0": "ssages - #6513 Blind Spot Monitoring (BLIS) - left sensor malfunction"
+  },
+  "block": "DE15",
+  "byte": 0,
+  "shift": 2,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #614 Blind Spot Monitoring (BLIS) - trailer connected - deactivat(ed)",
+  "this_car": "Enabled",
+  "options": {
+   "0": "les - #614 Blind Spot Monitoring (BLIS) - trailer connected - deactival"
+  },
+  "block": "DE15",
+  "byte": 0,
+  "shift": 3,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #625 Park brake applied - 1",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE15",
+  "byte": 0,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #626 Park brake applied - 2",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE15",
+  "byte": 0,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #630 Keyless Vehicle (KV) - place key in key holder",
+  "this_car": "Enabled",
+  "options": {
+   "0": "| Messages - #630 Keyless vehicle (k) - place key in key holder |"
+  },
+  "block": "DE15",
+  "byte": 0,
+  "shift": 6,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #632 Keyless Vehicle (KV) - press brake and clutch",
+  "this_car": "Enabled",
+  "options": {
+   "0": "| Messages - #6232 Keyless Yehicle (KY) - press brake and clutch |"
+  },
+  "block": "DE15",
+  "byte": 0,
+  "shift": 7,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #633 Keyless Vehicle (KV) - Hold Key next to symbol",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Messages - #633 Keyless Vehicle (K4 - Hold Key next to symbol"
+  },
+  "block": "DE16",
+  "byte": 3,
+  "shift": 1,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #640 Start / Stop - Engine starting",
+  "this_car": "Enabled",
+  "options": {
+   "0": "isabled",
+   "1": "nabled -"
+  },
+  "block": "DE15",
+  "byte": 1,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #641 Start / Stop - press clutch 2",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "\u201chabled ."
+  },
+  "block": "DE15",
+  "byte": 1,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #642 Start / Stop - malfunction",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled I"
+  },
+  "block": "DE15",
+  "byte": 1,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #643 Start / Stop - turn ignition off",
+  "this_car": "Enabled",
+  "options": {
+   "0": "abled",
+   "1": "abled B"
+  },
+  "block": "DE15",
+  "byte": 1,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #644 Start / Stop - select neutral",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "\u201chabled ."
+  },
+  "block": "DE15",
+  "byte": 1,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #650 Child power lock",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE15",
+  "byte": 1,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #651 Belt minder sensor failure",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled I"
+  },
+  "block": "DE15",
+  "byte": 1,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #655 One Touch Integrated Start (OTIS) - press brake to start",
+  "this_car": "Enabled",
+  "options": {
+   "0": "ages - #6355 One Touch Integrated Start (OTIS) - press brake to star"
+  },
+  "block": "DE16",
+  "byte": 1,
+  "shift": 4,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #656 One Touch Integrated Start (OTIS) - press clutch to start",
+  "this_car": "Enabled",
+  "options": {
+   "0": "ages - #656 One Touch Integrated Start (OTIS) - press clutch to star"
+  },
+  "block": "DE16",
+  "byte": 1,
+  "shift": 5,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #657 One Touch Integrated Start (OTIS) - press clutch and brak(e)",
+  "this_car": "Enabled",
+  "options": {
+   "0": "#657 One Touch Integrated Start (OTIS) - press clutch and brake &",
+   "1": "..."
+  },
+  "block": "DE16",
+  "byte": 1,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #658 One Touch Integrated Start (OTIS) - cranking time exceed(ed)",
+  "this_car": "Enabled",
+  "options": {
+   "0": "es - #6558 One Touch Integrated Start (OTIS) - cranking time excesc"
+  },
+  "block": "DE16",
+  "byte": 1,
+  "shift": 7,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #660 My Key Active - Drive Safely",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled ."
+  },
+  "block": "DE15",
+  "byte": 1,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #661 Greeting: Speed Limited to 80 MPH (130 km/h)",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Messages - #661 Greeting: Speed Limited to 80 MPH {130 km/h)"
+  },
+  "block": "DE15",
+  "byte": 2,
+  "shift": 0,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #662 Greeting: Speed Limited to 130 km/h",
+  "this_car": "Enabled",
+  "options": {
+   "0": "hled",
+   "1": "a]/=ls| -"
+  },
+  "block": "DE15",
+  "byte": 2,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #665 Check Speed - Drive Safely",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled l"
+  },
+  "block": "DE15",
+  "byte": 2,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #666 Vehicle Near Top Speed of MyKey Setting",
+  "this_car": "Enabled",
+  "options": {
+   "0": "1|",
+   "1": "d I"
+  },
+  "block": "DE15",
+  "byte": 2,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #667 Vehicle at Top Speed of MyKey Setting",
+  "this_car": "Enabled",
+  "options": {
+   "0": "led",
+   "1": "o e"
+  },
+  "block": "DE15",
+  "byte": 2,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #670 Buckle Up to Unmute Audio",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled I"
+  },
+  "block": "DE15",
+  "byte": 2,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #680 Front camera reduced visibility",
+  "this_car": "Enabled",
+  "options": {
+   "0": "sabled",
+   "1": "1abled -"
+  },
+  "block": "DE15",
+  "byte": 2,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #681 Lane Departure Warning System (LDWS) Camera malfuncti(on)",
+  "this_car": "Enabled",
+  "options": {
+   "0": "jes - #6381 Lane Departure Warning System (LOWS) Camera malfunc"
+  },
+  "block": "DE15",
+  "byte": 2,
+  "shift": 7,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #682 Front camera not available",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled I"
+  },
+  "block": "DE15",
+  "byte": 3,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #685 Lane Departure Warning System malfunction",
+  "this_car": "Enabled",
+  "options": {
+   "0": "i R",
+   "1": "| Messages - #6585 Lane Departure \\Warning System malfunction |"
+  },
+  "block": "DE15",
+  "byte": 3,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #688 Driver impairment monitor 1st warning",
+  "this_car": "Enabled",
+  "options": {
+   "0": "led ..",
+   "1": "| Messages - #6828 Driver impairment manitor 1st warning |"
+  },
+  "block": "DE15",
+  "byte": 3,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #689 Driver impairment monitor 2nd warning",
+  "this_car": "Enabled",
+  "options": {
+   "0": "led",
+   "1": "o e"
+  },
+  "block": "DE15",
+  "byte": 3,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #695 Auto High Beam Control (AHBC) on",
+  "this_car": "Enabled",
+  "options": {
+   "0": "abled",
+   "1": "abled B"
+  },
+  "block": "DE15",
+  "byte": 3,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #696 Auto High Beam Control (AHBC) off",
+  "this_car": "Enabled",
+  "options": {
+   "0": "abled",
+   "1": "bled B"
+  },
+  "block": "DE15",
+  "byte": 3,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #710 City Safety auto braking",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled I"
+  },
+  "block": "DE16",
+  "byte": 0,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #711 City Safety sensor blocked",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled I"
+  },
+  "block": "DE16",
+  "byte": 0,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #712 City Safety malfunction",
+  "this_car": "Enabled",
+  "options": {
+   "1": "Enabled"
+  },
+  "block": "DE16",
+  "byte": 0,
+  "shift": 4,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #723 Transmission State",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE16",
+  "byte": 0,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #724 Transmission State",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE16",
+  "byte": 1,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #725 Transmission Heat Protection",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled ."
+  },
+  "block": "DE16",
+  "byte": 1,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #746 Brake system malfunction",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled I"
+  },
+  "block": "DE15",
+  "byte": 3,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #760 Remote Start Active",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE16",
+  "byte": 1,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #761 Remote Start Passive Entry Passive Start",
+  "this_car": "Enabled",
+  "options": {
+   "0": ",6B6J6J96B6B6B6B69Bn69@\u2014 @",
+   "1": "| Messages - #7651 Remaote Start Passive Entry Passive Start |"
+  },
+  "block": "DE16",
+  "byte": 1,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #790 One Touch Integrated Start (OTIS) - engine start pending, \u2026",
+  "this_car": "Enabled",
+  "options": {
+   "0": "#790 One Touch Integrated Start (OTIS) - engine start pending, ples",
+   "1": "..."
+  },
+  "block": "DE16",
+  "byte": 3,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #791 One Touch Integrated Start (OTIS) - engine start cancelled",
+  "this_car": "Enabled",
+  "options": {
+   "0": "ges - #791 One Touch Integrated Start (OTIS) - engine start cancelle"
+  },
+  "block": "DE16",
+  "byte": 3,
+  "shift": 3,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Messages - #98 Engine On",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE14",
+  "byte": 1,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Metric Units Type",
+  "this_car": "L/100 km",
+  "options": {
+   "0": "L1200 ki",
+   "1": "kmfi"
+  },
+  "block": "DE02",
+  "byte": 3,
+  "shift": 0,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": false,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "MyKey Menu - Blind Spot Monitoring",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE05",
+  "byte": 0,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "MyKey Menu - Cross Traffic Alert",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE05",
+  "byte": 0,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "MyKey Menu - Forward Collision Alert",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE05",
+  "byte": 0,
+  "shift": 3,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "MyKey Menu - Lane Departure Warning",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE05",
+  "byte": 0,
+  "shift": 0,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Navigation Repeater",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 1,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Passenger Beltminder",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1A",
+  "byte": 0,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Passenger Seat",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE23",
+  "byte": 1,
+  "shift": 0,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "RS Feature",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE05",
+  "byte": 2,
+  "shift": 0,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "RS Feature - Animation",
+  "this_car": "Base",
+  "options": {
+   "0": "Base",
+   "1": "R5+"
+  },
+  "block": "DE05",
+  "byte": 3,
+  "shift": 7,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "RS Feature - Exhaust Settings",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE05",
+  "byte": 3,
+  "shift": 6,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "RS Feature - Launch Control",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE05",
+  "byte": 0,
+  "shift": 6,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "RS Feature - Peformance Shift Control",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE05",
+  "byte": 0,
+  "shift": 7,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "RS Feature - Selectable Drive Modes",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE05",
+  "byte": 2,
+  "shift": 1,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Rear Defrost",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE23",
+  "byte": 0,
+  "shift": 5,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Rear beltminder",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1A",
+  "byte": 0,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Remote Start",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 2,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Remote Start",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "71": "Enabled"
+  },
+  "block": "DE23",
+  "byte": 0,
+  "shift": 0,
+  "width": 7,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Remote Start - Driver Seat",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE23",
+  "byte": 1,
+  "shift": 1,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Remote Start - Passenger Seat",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE23",
+  "byte": 1,
+  "shift": 0,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Remote Start - Steering Wheel",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE23",
+  "byte": 0,
+  "shift": 7,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Remote Start Front Defrost HVAC",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE23",
+  "byte": 0,
+  "shift": 4,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Remote Start Menu - Climate Mode",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE23",
+  "byte": 0,
+  "shift": 3,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Remote Start Menu - Duration Timer",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE23",
+  "byte": 0,
+  "shift": 2,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true,
+  "verified_row": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Remote Start Menu - Front windows and washer jets defroster",
+  "this_car": "Disabled",
+  "options": {
+   "0": "| Remote Start Menu - Front windows and washer jets defroster |"
+  },
+  "block": "DE23",
+  "byte": 0,
+  "shift": 4,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Remote Start Menu - Quiet Mode On/Off",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE23",
+  "byte": 0,
+  "shift": 1,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Remote Start Menu - Rear windows and mirrors defroster",
+  "this_car": "Disabled",
+  "options": {
+   "0": "2 2 ===",
+   "1": ".4 |Remate Start Menu - Rear windows and mirrors defroster |"
+  },
+  "block": "DE23",
+  "byte": 0,
+  "shift": 5,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Remote Start Menu - Remote Start enable/disable",
+  "this_car": "Disabled",
+  "options": {
+   "0": "sabled -",
+   "1": "1abled"
+  },
+  "block": "DE23",
+  "byte": 0,
+  "shift": 0,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Remote Start Menu - Reset to default",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE23",
+  "byte": 0,
+  "shift": 6,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Tire Pressure Monitor",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE1B",
+  "byte": 1,
+  "shift": 5,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer - All Values",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE02",
+  "byte": 0,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer - Average Fuel Economy",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE02",
+  "byte": 0,
+  "shift": 4,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer - Average Speed",
+  "this_car": "Disabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE02",
+  "byte": 0,
+  "shift": 6,
+  "width": 1,
+  "car_value": 0,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer - Digital Speedometer",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE02",
+  "byte": 1,
+  "shift": 7,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer - Distance Till Empty",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE02",
+  "byte": 0,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer - Instant Fuel Economy",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE02",
+  "byte": 0,
+  "shift": 3,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer - Navigation Repeater",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE02",
+  "byte": 1,
+  "shift": 6,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer - Trip Timer",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE02",
+  "byte": 0,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer 1 - Screen A (upper left)",
+  "this_car": "Trip Odometer",
+  "options": {
+   "1": "Trip Timer",
+   "2": "Distance Till Empty",
+   "3": "Instant Fuel Econarmy",
+   "4": "Average Fuel Econarmy",
+   "5": "Digital Speedometer Gauge",
+   "7": "Trip Odometer"
+  },
+  "block": "DE03",
+  "byte": 0,
+  "shift": 0,
+  "width": 3,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer 1 - Screen B (upper right)",
+  "this_car": "Average Fuel Economy",
+  "options": {
+   "0": "Default",
+   "1": "Trip Timer",
+   "2": "Distance Till Empty",
+   "3": "Instant Fuel Econormy",
+   "4": "Average Fuel Econormy",
+   "5": "Average Speed",
+   "6": "Digital Speedometer Gauge",
+   "7": "Trip Odometer"
+  },
+  "block": "DE03",
+  "byte": 1,
+  "shift": 0,
+  "width": 3,
+  "car_value": 4,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer 1 - Screen C (down left)",
+  "this_car": "Instant Fuel Economy",
+  "options": {
+   "0": "Default",
+   "1": "Trip Timer",
+   "2": "Distance Till Empty",
+   "3": "Instant Fuel Econormy",
+   "4": "Average Fuel Econormy",
+   "5": "Average Speed",
+   "6": "Digital Speedometer Gauge",
+   "7": "Trip Odometer"
+  },
+  "block": "DE03",
+  "byte": 2,
+  "shift": 0,
+  "width": 3,
+  "car_value": 3,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer 1 - Screen D (down right)",
+  "this_car": "Distance Till Empty",
+  "options": {
+   "1": "Trip Timer",
+   "2": "Distance Till Empty",
+   "3": "Instant Fuel Econarmy",
+   "4": "Average Fuel Econarmy",
+   "5": "Digital Speedometer Gauge",
+   "7": "Trip Odometer"
+  },
+  "block": "DE03",
+  "byte": 3,
+  "shift": 1,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer 2 - Screen A (upper left)",
+  "this_car": "Trip Odometer",
+  "options": {
+   "1": "Trip Timer",
+   "2": "Distance Till Empty",
+   "3": "Instant Fuel Econarmy",
+   "4": "Average Fuel Econarmy",
+   "5": "Digital Speedometer Gauge",
+   "7": "Trip Odometer"
+  },
+  "block": "DE04",
+  "byte": 0,
+  "shift": 0,
+  "width": 3,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer 2 - Screen B (upper right)",
+  "this_car": "Average Fuel Economy",
+  "options": {
+   "0": "Default",
+   "1": "Trip Timer",
+   "2": "Distance Till Empty",
+   "3": "Instant Fuel Econormy",
+   "4": "Average Fuel Econormy",
+   "5": "Average Speed",
+   "6": "Digital Speedometer Gauge",
+   "7": "Trip Odometer"
+  },
+  "block": "DE04",
+  "byte": 1,
+  "shift": 0,
+  "width": 3,
+  "car_value": 4,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer 2 - Screen C (down left)",
+  "this_car": "Instant Fuel Economy",
+  "options": {
+   "0": "Default",
+   "1": "Trip Timer",
+   "2": "Distance Till Empty",
+   "3": "Instant Fuel Econormy",
+   "4": "Average Fuel Econormy",
+   "5": "Average Speed",
+   "6": "Digital Speedometer Gauge",
+   "7": "Trip Odometer"
+  },
+  "block": "DE04",
+  "byte": 2,
+  "shift": 0,
+  "width": 3,
+  "car_value": 3,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer 2 - Screen D (down right)",
+  "this_car": "Distance Till Empty",
+  "options": {
+   "1": "Trip Timer",
+   "2": "Distance Till Empty",
+   "3": "Instant Fuel Econarmy",
+   "4": "Average Fuel Econarmy",
+   "5": "Digital Speedometer Gauge",
+   "7": "Trip Odometer"
+  },
+  "block": "DE04",
+  "byte": 3,
+  "shift": 1,
+  "width": 1,
+  "guess": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer B",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE02",
+  "byte": 0,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer Type",
+  "this_car": "North America",
+  "options": {
+   "0": "Europe",
+   "1": "Morth America"
+  },
+  "block": "DE02",
+  "byte": 1,
+  "shift": 0,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": false
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Trip Computer Units",
+  "this_car": "Imperial",
+  "options": {
+   "0": "Metfric",
+   "1": "Imperial"
+  },
+  "block": "DE02",
+  "byte": 3,
+  "shift": 1,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ },
+ {
+  "module": "IPC",
+  "address": "720",
+  "name": "Vehicle Graphics",
+  "this_car": "Enabled",
+  "options": {
+   "0": "Disabled",
+   "1": "Enabled"
+  },
+  "block": "DE05",
+  "byte": 2,
+  "shift": 2,
+  "width": 1,
+  "car_value": 1,
+  "checked_against_car_value": true
+ }
+]

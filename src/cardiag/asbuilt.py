@@ -22,7 +22,10 @@ depends on the kind:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections import Counter
+from dataclasses import dataclass
+from importlib.resources import files
+import json
 
 KINDS = ("toggle", "choice", "number", "flags", "hex")
 
@@ -60,6 +63,7 @@ class Setting:
     offset: float = 0.0
     unit: str = ""
     group: str = ""
+    read_only: bool = False  # reference interpretations of captured bytes, not draft controls
 
     @property
     def shift(self) -> int:
@@ -99,6 +103,8 @@ class Setting:
             "byte": self.byte, "size": self.size, "mask": self.mask, "status": self.status,
             "evidence": self.evidence, "unknown": self.unknown, "group": self.group,
         }
+        if self.read_only:
+            out["read_only"] = True
         if self.kind == "toggle":
             out["states"] = list(self.states) if self.states else None
         elif self.kind == "choice":
@@ -197,14 +203,51 @@ MODULES: tuple[Module, ...] = (
     )),
 )
 
-SETTINGS: tuple[Setting, ...] = (
+_KEY_CHIME = (
     Setting(
         "ipc.key_in_ignition_beep", "Key-in-ignition beep", "IPC", "DE11", "toggle", byte=2, mask=0x80,
         group="Chimes",
         evidence="Named by the operator; FORScan cleared this bit and set it again, and both writes were accepted.",
-        unknown="which state turns the beep on.",
+        states=("Enabled", "Disabled"),
     ),
 )
+
+
+def _forscan_settings() -> tuple[Setting, ...]:
+    """Read the captured field definitions from PR #10, not the displayed snapshot values."""
+    catalog = files("cardiag").joinpath("data", "focus-2017-config-map.json")
+    addresses = {module.name: module.request for module in MODULES}
+    ids: Counter[str] = Counter()
+    settings = []
+    for row in json.loads(catalog.read_text(encoding="utf-8")):
+        if "unmapped" in row:
+            continue
+        module, did, name = row["module"], row["block"], row["name"]
+        byte, shift, width = row["byte"], row["shift"], row["width"]
+        if addresses.get(module) != row["address"] or not 0 <= shift < shift + width <= 8:
+            raise ValueError(f"Invalid FORScan address or bit range for {name}")
+        if (module, did, byte, shift, width, name) == ("IPC", "DE11", 2, 7, 1, "Chimes - Key In Ignition"):
+            continue  # already present with evidence from an actual change on the captured car
+        mask = ((1 << width) - 1) << shift
+        key = f"forscan:{module}:{did}:{byte}:{mask:02X}:{name}"
+        ids[key] += 1
+        checked = row.get("checked_against_car_value", False)
+        options = tuple(sorted((int(value), label) for value, label in row["options"].items())) if checked else ()
+        evidence = "FORScan replay map."
+        if checked:
+            evidence += " Matched against FORScan’s value for this capture; OCR labels may contain typos."
+        elif row.get("guess"):
+            evidence += " Tentative bit range; showing raw bits only."
+        else:
+            evidence += " Not matched against FORScan’s value for this capture; showing raw bits only."
+        settings.append(Setting(
+            f"{key}:{ids[key]}", name, module, did, "choice" if options else "hex", byte, mask,
+            options=options, status="reported", evidence=evidence, read_only=True,
+        ))
+    return tuple(settings)
+
+
+SETTINGS = _KEY_CHIME + _forscan_settings()
 
 # Made up, in a block of their own, to show each kind of setting with the simulated car. Not the car's.
 EXAMPLE_MODULE = Module("EXAMPLE", "made-up examples", "MS", "000", "008", (("DE01", 1, "A50C2A0258017F"),))
@@ -250,7 +293,7 @@ def _block(modules: tuple[Module, ...], module: str, did: str) -> tuple[int, str
 
 
 def check(settings: tuple[Setting, ...] = SETTINGS, modules: tuple[Module, ...] = MODULES) -> None:
-    """Raise ValueError if a setting does not fit the block it names, or two overlap."""
+    """Raise ValueError for invalid fields or overlapping draft controls."""
     seen: dict[str, Setting] = {}
     taken: dict[tuple[str, str, int], str] = {}
     for setting in settings:
@@ -279,6 +322,9 @@ def check(settings: tuple[Setting, ...] = SETTINGS, modules: tuple[Module, ...] 
             raise ValueError(f"{where} has more flags than the page can handle")
         if setting.kind == "number" and setting.scale == 0:
             raise ValueError(f"{where} has a scale of zero")
+        # FORScan lists alternative interpretations of some overlapping bits.
+        if setting.read_only:
+            continue
         for index in range(setting.size):
             bits = (setting.mask >> (8 * (setting.size - 1 - index))) & 0xFF
             for bit in range(8):
