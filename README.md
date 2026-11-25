@@ -98,6 +98,16 @@ unplugged or the ignition is off, so it can be started first. The tabs:
   Settings without a mapped bit range and the separate central configuration
   aren't included. The key-in-ignition chime and made-up simulation examples
   still let you draft a change locally; nothing is sent to the car.
+- **Snapshots:** "Read from the car" reads the body control module (`726`)
+  and the cluster (`720`) with `22 DExx` and keeps the blocks as a snapshot.
+  A block refused in the normal session is tried once more in the extended
+  session (`10 03`), and the module is always put back with `10 01`. Nothing
+  is unlocked or written. The cluster is on the MS bus, which needs an OBDLink
+  with STN commands (`STP53`); a plain ELM327 reads body control only.
+  FORScan `.abt` backups can be imported too; their checksums are verified.
+  Like commits, each snapshot points at the car's previous one, so the page
+  lists what changed each time, compares any two, and can show any snapshot's
+  settings.
 
 A recording can be made in one of four ways, picked beside the record button
 or on the Drive tab. Fewer values means each is read more often:
@@ -356,6 +366,8 @@ QuickJS (`qjs`) and is skipped without one. It checks behaviour, not layout.
 | `src/cardiag/sync.py` | Sending recordings to a central server |
 | `src/cardiag/maker.py` | Definitions of maker-specific values, and turning their bytes into numbers |
 | `src/cardiag/discover.py` | Ranks what the bytes captured in a discovery run moved with |
+| `src/cardiag/asbuilt.py` | Configuration blocks, the settings mapped onto them, and diffs between two sets of blocks |
+| `src/cardiag/backups.py` | Configuration snapshots: reading the car, importing FORScan backups, the history |
 | `src/cardiag/service.py` | Background worker that owns the adapter and retries the connection |
 | `src/cardiag/web.py` | Web server: JSON endpoints and a live event stream |
 | `src/cardiag/web/index.html` | The web page |

@@ -118,7 +118,7 @@
     border: 1px solid var(--border); border-radius: 4px; background: var(--surface);
     color: var(--ink); font: inherit;
   }
-  .toolbar select { flex: 0 1 260px; }
+  .toolbar select { flex: 0 1 260px; min-width: 0; max-width: 100%; text-overflow: ellipsis; }
   details { margin: 10px 0; }
   summary { min-height: 44px; display: flex; align-items: center; color: var(--ink-2); font-weight: 600; cursor: pointer; }
   .choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0 12px; }
@@ -217,6 +217,12 @@
   .session { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 
   /* Configuration: one row per setting, then the blocks the settings live in. */
+  .snapshot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; padding: 10px 0; border-top: 1px solid var(--hairline); }
+  .snapshot:first-child { border-top: 0; }
+  .snapshot .what { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .snapshot .what b { font-weight: 600; }
+  .change { padding: 10px 0; border-top: 1px solid var(--hairline); }
+  .change:first-child { border-top: 0; }
   .setting { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.4fr); gap: 6px 16px; padding: 10px 0; border-top: 1px solid var(--hairline); }
   .setting:first-of-type { border-top: 0; }
   .setting .what { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -427,9 +433,29 @@
 
     <section id="panel-config" hidden>
       <div class="card">
-        <div class="head"><h2>Configuration</h2><span class="secondary small" id="config-source"></span></div>
-        <p class="secondary small">These values come from a saved capture, not the connected car. FORScan may list more than one interpretation of the same bits. Where a draft control is available, it previews the changed block without sending anything to the car.</p>
+        <div class="head"><h2>Snapshots</h2><span class="secondary small" id="config-history-vin"></span></div>
+        <p class="secondary small">Read the body control module and the cluster from the car, or import FORScan .abt backups. Each one is kept as a snapshot, with what changed since the one before. Reading the car only reads; nothing is written to it.</p>
         <div class="toolbar">
+          <input id="config-snapshot-note" type="text" maxlength="200" autocomplete="off" placeholder="Note, such as before the dealer visit" aria-label="Note for the next snapshot">
+          <button class="primary" id="config-read">Read from the car</button>
+          <button class="quiet" id="config-import">Import FORScan backups</button>
+          <input id="config-files" type="file" accept=".abt" multiple hidden>
+        </div>
+        <div class="status" id="config-read-state"></div>
+        <div id="config-log"></div>
+        <h3>Compare</h3>
+        <div class="toolbar">
+          <select id="config-before" aria-label="Compare from"></select>
+          <select id="config-after" aria-label="Compare to"></select>
+          <button class="quiet" id="config-compare">Compare</button>
+        </div>
+        <div id="config-diff"></div>
+      </div>
+      <div class="card">
+        <div class="head"><h2>Configuration</h2><span class="secondary small" id="config-source"></span></div>
+        <p class="secondary small">Shows the bundled capture, or the snapshot you pick. FORScan may list more than one interpretation of the same bits. Where a draft control is available, it previews the changed block without sending anything to the car.</p>
+        <div class="toolbar">
+          <select id="config-snapshot" aria-label="Which blocks to show"></select>
           <select id="config-module" aria-label="Module"></select>
           <input id="config-search" type="search" autocapitalize="off" autocomplete="off" placeholder="Find a setting, module or identifier" aria-label="Find a setting">
         </div>
@@ -2413,8 +2439,142 @@ function renderConfig() {
     el("div", { class: "toolbar" }, el("button", { class: "quiet", onclick: () => { drafts.clear(); renderConfig(); } }, "Discard all drafts")))] : []));
 }
 
+/* ---- snapshots: reads and imports kept as a history ---------------------- */
+
+let configHistory = null;   // the snapshot log, from the server
+let newestSeen = null;      // newest snapshot when the compare choices were last set
+
+const SNAPSHOT_SOURCES = { car: "Read from the car", simulation: "Read from the simulated car", forscan: "FORScan backup" };
+
+function snapshotLabel(entry) {
+  return "Snapshot " + entry.id + " · " + (SNAPSHOT_SOURCES[entry.source] || entry.source) + (entry.note ? ": " + entry.note : "");
+}
+
+function changeWords(summary) {
+  if (!summary.blocks) return "No changes";
+  const blocks = summary.blocks + (summary.blocks === 1 ? " block" : " blocks") + " changed";
+  const names = summary.settings;
+  if (!names.length) return blocks + ", no named settings among them";
+  return blocks + ": " + names.slice(0, 4).join(", ") + (names.length > 4 ? " and " + (names.length - 4) + " more" : "");
+}
+
+function snapshotRow(entry) {
+  const facts = [new Date(entry.created_at * 1000).toLocaleString(), entry.modules.join(", "),
+    entry.read + (entry.read === 1 ? " block" : " blocks"), "VIN " + entry.vin];
+  const since = entry.changed ? changeWords(entry.changed) + " since snapshot " + entry.parent
+    : "First snapshot for this car. Compared with the capture: " + changeWords(entry.against_capture);
+  const missing = entry.problems.length;
+  return el("div", { class: "snapshot" },
+    el("div", { class: "what" },
+      el("b", null, snapshotLabel(entry)),
+      el("span", { class: "secondary small" }, facts.join(" · ")),
+      el("span", { class: "small" }, since),
+      missing ? el("span", null, chip(false, missing + (missing === 1 ? " block" : " blocks") + " could not be read")) : null),
+    el("div", { class: "toolbar" },
+      el("button", { class: "quiet slim", onclick: () => compareSnapshots(entry.parent ? String(entry.parent) : "capture", String(entry.id)) }, "Changes"),
+      el("button", { class: "quiet slim", onclick: () => { $("config-snapshot").value = String(entry.id); loadConfig(); } }, "Show settings")));
+}
+
+function renderHistory() {
+  const list = configHistory ? configHistory.snapshots : [];
+  const sources = [["capture", "Bundled capture"], ...list.map((entry) => [String(entry.id), snapshotLabel(entry)])];
+  fillSelect($("config-snapshot"), sources);
+  fillSelect($("config-before"), sources);
+  fillSelect($("config-after"), sources);
+  const newest = list[0] || null;
+  if (newest && newest.id !== newestSeen) {
+    $("config-after").value = String(newest.id);
+    $("config-before").value = newest.parent ? String(newest.parent) : "capture";
+  }
+  newestSeen = newest ? newest.id : null;
+  $("config-history-vin").textContent = list.length ? list.length + (list.length === 1 ? " snapshot" : " snapshots") : "";
+  $("config-log").replaceChildren(list.length ? el("div", null, list.map(snapshotRow))
+    : el("p", { class: "secondary" }, "No snapshots yet. Read the car or import a FORScan backup to start the history."));
+}
+
+async function loadHistory() {
+  const result = await api("/api/config/history");
+  if (result.error) {
+    configHistory = null;
+    $("config-log").replaceChildren(problem(result.error));
+    return;
+  }
+  configHistory = result;
+  renderHistory();
+}
+
+function spaced(hex) {
+  return hex ? hexOf(bytesOf(hex)) : "—";
+}
+
+function changeView(change) {
+  const title = change.module + " · " + change.did;
+  if (change.before === null || change.after === null) {
+    return el("div", { class: "change" }, el("b", { class: "mono" }, title),
+      el("div", { class: "secondary small" }, change.before === null ? "Only in the later one" : "Only in the earlier one"));
+  }
+  return el("div", { class: "change" },
+    el("b", { class: "mono" }, title),
+    el("div", { class: "secondary small mono" }, spaced(change.before) + " → " + spaced(change.after)),
+    change.settings.length
+      ? table(["Setting", "Before", "After"], change.settings.map((setting) => el("tr", null,
+        td(setting.name), td(setting.before), td(setting.after))))
+      : el("div", { class: "secondary small" }, "No named setting covers the bytes that changed."));
+}
+
+async function compareSnapshots(before, after) {
+  $("config-before").value = before;
+  $("config-after").value = after;
+  const result = await api("/api/config/compare?before=" + before + "&after=" + after);
+  if (result.error) {
+    $("config-diff").replaceChildren(problem(result.error));
+    return;
+  }
+  $("config-diff").replaceChildren(
+    el("p", { class: "secondary small" }, "From " + result.before + " to " + result.after + ": "
+      + (result.changes.length ? result.changes.length + (result.changes.length === 1 ? " block differs." : " blocks differ.") : "no differences.")),
+    ...result.changes.map(changeView));
+}
+
+function snapshotDone(result, what) {
+  if (result.error) {
+    $("config-read-state").replaceChildren(problem(result.error));
+    return;
+  }
+  configHistory = result;
+  renderHistory();
+  const entry = result.snapshots.find((each) => each.id === result.snapshot);
+  const missing = entry.problems.map((each) => each.module + (each.did ? " " + each.did : "") + ": " + each.reason);
+  $("config-read-state").replaceChildren(statusLine(missing.length ? "warning" : "good",
+    what + " kept as snapshot " + entry.id + ". " + (entry.changed ? changeWords(entry.changed) + "." : "It is the first for this car.")
+    + (missing.length ? " Not read: " + missing.join("; ") + "." : "")));
+  $("config-snapshot-note").value = "";
+  $("config-snapshot").value = String(entry.id);
+  compareSnapshots(entry.parent ? String(entry.parent) : "capture", String(entry.id));
+  loadConfig();
+}
+
+async function readCar() {
+  const button = $("config-read");
+  button.disabled = true;
+  $("config-read-state").textContent = "Reading the body control module and the cluster…";
+  const result = await api("/api/config/read", { note: $("config-snapshot-note").value });
+  button.disabled = false;
+  snapshotDone(result, "The car's configuration was");
+}
+
+/* Files from the picker, or anything with a name and an async text(). */
+async function importBackups(files) {
+  if (!files.length) return;
+  $("config-read-state").textContent = "Importing " + files.length + (files.length === 1 ? " file…" : " files…");
+  const read = await Promise.all(files.map(async (file) => ({ name: file.name, text: await file.text() })));
+  const result = await api("/api/config/import", { files: read, note: $("config-snapshot-note").value });
+  snapshotDone(result, "The FORScan backup was");
+}
+
 async function loadConfig() {
-  const result = await api("/api/config");
+  const snapshot = $("config-snapshot").value;
+  const result = await api("/api/config" + (snapshot && snapshot !== "capture" ? "?snapshot=" + snapshot : ""));
   if (result.error) {
     config = null;
     $("config-source").textContent = "";
@@ -2422,13 +2582,13 @@ async function loadConfig() {
     $("config").replaceChildren(el("div", { class: "card" }, problem(result.error)));
     return;
   }
-  if (!config || config.examples !== result.examples) drafts.clear();
+  if (!config || config.examples !== result.examples || config.source !== result.source) drafts.clear();
   config = result;
   const real = result.modules.filter((module) => module.name !== "EXAMPLE");
   const blocks = real.flatMap((module) => module.blocks);
   const mapped = blocks.filter((block) => block.settings.length);
   const count = mapped.reduce((sum, block) => sum + block.settings.length, 0);
-  $("config-source").textContent = result.car + " · captured blocks · " + count
+  $("config-source").textContent = result.car + " · " + (result.source === "capture" ? "bundled capture" : result.source) + " · " + count
     + (count === 1 ? " setting" : " settings") + " mapped across " + mapped.length + " of " + blocks.length + " blocks"
     + (result.examples ? " · plus made-up examples for the simulated car" : "");
   fillSelect($("config-module"), [["", "All modules"], ...result.modules.map((module) => [module.name, module.name + " · " + module.label])]);
@@ -2440,7 +2600,7 @@ let activeTab = "live";
 /* Fill the open tab if it is one whose content belongs to the connected car. */
 function loadCarTab() {
   if (activeTab === "diagnosis" || activeTab === "drive") loadReportSources().then(loadReport);
-  if (activeTab === "config") loadConfig();
+  if (activeTab === "config") loadHistory().then(loadConfig);
   if (activeTab === "setup") {
     loadSetup();
     loadMaker();
@@ -2494,6 +2654,14 @@ $("gears-clear").addEventListener("click", () => changeGears({ action: "clear" }
 $("update-check").addEventListener("click", checkForUpdate);
 $("update-install").addEventListener("click", installUpdate);
 $("config-module").addEventListener("change", renderConfig);
+$("config-snapshot").addEventListener("change", () => loadConfig());
+$("config-read").addEventListener("click", readCar);
+$("config-import").addEventListener("click", () => $("config-files").click());
+$("config-files").addEventListener("change", (event) => {
+  importBackups(Array.from(event.currentTarget.files || []));
+  event.currentTarget.value = "";
+});
+$("config-compare").addEventListener("click", () => compareSnapshots($("config-before").value, $("config-after").value));
 $("config-search").addEventListener("input", renderConfig);
 $("config-unmapped").addEventListener("change", renderConfig);
 

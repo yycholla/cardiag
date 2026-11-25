@@ -335,10 +335,52 @@ def check(settings: tuple[Setting, ...] = SETTINGS, modules: tuple[Module, ...] 
                     taken[key] = setting.id
 
 
-def report(simulation: str | None = None) -> dict:
+def capture_tree() -> dict[str, dict[str, str]]:
+    """The bundled capture in the same shape as a snapshot, VIN blocks left out."""
+    return {module.name: {did: data for did, _, data in module.blocks if data} for module in MODULES}
+
+
+def diff(before: dict[str, dict[str, str]], after: dict[str, dict[str, str]]) -> list[dict]:
+    """Blocks that differ between two snapshots' trees, with the bytes and named settings that moved.
+
+    A block only one side has is listed as added or gone, with no settings compared.
+    """
+    order = {module.name: index for index, module in enumerate(MODULES)}
+    changes = []
+    for module in sorted(set(before) | set(after), key=lambda name: (order.get(name, 99), name)):
+        old_blocks, new_blocks = before.get(module, {}), after.get(module, {})
+        for did in sorted(set(old_blocks) | set(new_blocks)):
+            old, new = old_blocks.get(did), new_blocks.get(did)
+            if old == new:
+                continue
+            entry = {"module": module, "did": did, "before": old, "after": new, "bytes": [], "settings": []}
+            if old is not None and new is not None:
+                a, b = bytes.fromhex(old), bytes.fromhex(new)
+                entry["bytes"] = [i for i in range(max(len(a), len(b))) if a[i:i + 1] != b[i:i + 1]]
+                seen = set()
+                for setting in SETTINGS:
+                    if setting.module != module or setting.did != did:
+                        continue
+                    end = setting.byte + setting.size
+                    if end > len(a) or end > len(b) or setting.raw(a) == setting.raw(b):
+                        continue
+                    words = (setting.name, setting.describe(setting.raw(a)), setting.describe(setting.raw(b)))
+                    if words in seen:
+                        continue  # FORScan lists some fields twice under one name
+                    seen.add(words)
+                    entry["settings"].append({
+                        "id": setting.id, "name": words[0], "before": words[1], "after": words[2],
+                        "read_only": setting.read_only,
+                    })
+            changes.append(entry)
+    return changes
+
+
+def report(simulation: str | None = None, tree: dict[str, dict[str, str]] | None = None, source: str = "capture") -> dict:
     """Every block with its bytes and the settings mapped onto it, for the page.
 
     With a simulated car the made-up examples are added, so each kind of setting can be seen.
+    With a snapshot's tree, only saved blocks are shown; missing reads are not filled from the capture.
     """
     modules, settings = MODULES, SETTINGS
     if simulation:
@@ -346,15 +388,21 @@ def report(simulation: str | None = None) -> dict:
     out = []
     for module in modules:
         blocks = []
-        for did, number, data in module.blocks:
+        saved = tree.get(module.name, {}) if tree is not None and module is not EXAMPLE_MODULE else None
+        for did, number, captured in module.blocks:
+            if saved is not None and did not in saved:
+                continue
+            data = saved[did] if saved is not None else captured
             block = bytes.fromhex(data) if data else None
             mapped = []
             for setting in settings:
-                if setting.module == module.name and setting.did == did and block is not None:
+                if (setting.module == module.name and setting.did == did and block is not None
+                        and setting.byte + setting.size <= len(block)):
                     raw = setting.raw(block)
                     mapped.append({**setting.as_json(), "raw": raw, "text": setting.describe(raw)})
             blocks.append({
                 "did": did, "block": number, "hex": data, "withheld": data is None,
+                "origin": "snapshot" if saved is not None else "capture",
                 "size": len(block) if block is not None else None, "settings": mapped,
             })
         out.append({
@@ -363,7 +411,7 @@ def report(simulation: str | None = None) -> dict:
         })
     return {
         "car": "2017 Ford Focus 2.0 GDI",
-        "source": "capture",
+        "source": source,
         "examples": bool(simulation),
         "modules": out,
     }

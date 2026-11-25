@@ -586,6 +586,7 @@ async function scenario() {
 
   // Configuration: the captured blocks and the settings in them. Changes are drafted, never sent.
   routes["/api/config"] = DATA.config;
+  routes["/api/config/history"] = DATA.config_history_empty;
   await $("tab-config").fire("click");
   await settle();
   check($("panel-config").hidden === false, "opens the Configuration tab");
@@ -625,6 +626,43 @@ async function scenario() {
   await $("config-module").fire("change");
   check($("config").children.length === 1 && text($("config")).startsWith("GPSM"), "shows one module");
   sane($("config"), "the configuration");
+  check(text($("config-log")).startsWith("No snapshots yet"), "explains an empty history: " + text($("config-log")));
+  check($("config-snapshot").value === "capture" && $("config-snapshot").children.length === 1, "shows the bundled capture to begin with");
+
+  // Reading the car keeps a snapshot, and shows what changed and its settings.
+  const configRequests = [];
+  routes["/api/config/read"] = (options) => { configRequests.push(JSON.parse(options.body)); return DATA.config_read; };
+  routes["/api/config/compare?before=capture&after=1"] = DATA.config_compare;
+  routes["/api/config?snapshot=1"] = DATA.config_snapshot;
+  $("config-module").value = "";
+  $("config-snapshot-note").value = "parked";
+  await $("config-read").fire("click");
+  await settle();
+  check(configRequests[0].note === "parked", "sends the note with the read");
+  check(text($("config-read-state")).includes("kept as snapshot 1. It is the first for this car."), "says what was kept: " + text($("config-read-state")));
+  check($("config-snapshot-note").value === "" && $("config-read").disabled === false, "clears the note and frees the button");
+  check(text($("config-log")).includes("Snapshot 1 · Read from the car: parked") && text($("config-log")).includes("Compared with the capture: 1 block changed: Key-in-ignition beep"), "logs the snapshot: " + text($("config-log")));
+  check(text($("config-diff")).includes("From the bundled capture to snapshot 1: 1 block differs.") && text($("config-diff")).includes("FF FF FF 3E → FF FF 7F 3E"), "shows the changed block: " + text($("config-diff")));
+  check(text($("config-diff")).includes("Key-in-ignition beepEnabledDisabled"), "and the setting that changed");
+  check($("config-snapshot").value === "1" && text($("config-source")).includes("snapshot 1"), "shows the new snapshot's settings: " + text($("config-source")));
+  check($("config-before").value === "capture" && $("config-after").value === "1", "compares it with what came before");
+
+  // A FORScan backup becomes the next snapshot, compared with the read before it.
+  const imports = [];
+  routes["/api/config/import"] = (options) => { imports.push(JSON.parse(options.body)); return DATA.config_imported; };
+  routes["/api/config/compare?before=1&after=2"] = DATA.config_compare_import;
+  routes["/api/config?snapshot=2"] = DATA.config_snapshot;
+  await importBackups([{ name: "car_IPC.abt", text: async () => ";Block 1\n" }]);
+  await settle();
+  check(imports[0].files[0].name === "car_IPC.abt" && imports[0].files[0].text === ";Block 1\n", "sends each file's name and text");
+  check(text($("config-log")).startsWith("Snapshot 2 · FORScan backup") && text($("config-log")).includes("1 block changed: Key-in-ignition beep since snapshot 1"), "logs the import first: " + text($("config-log")));
+  check(text($("config-diff")).includes("From snapshot 1 to snapshot 2") && text($("config-diff")).includes("DisabledEnabled"), "shows the change back");
+  routes["/api/config/import"] = { error: "x.abt: line 1 has a bad checksum; the file may be damaged" };
+  await importBackups([{ name: "x.abt", text: async () => "720G1G1430100006E" }]);
+  check(text($("config-read-state")).includes("bad checksum"), "explains a refused file");
+  sane($("config-log"), "the snapshot log");
+  sane($("config-diff"), "the comparison");
+  $("config-snapshot").value = "capture";
 
   // With a simulated car, made-up settings show every kind of control.
   routes["/api/config"] = DATA.config_examples;

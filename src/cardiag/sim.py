@@ -37,6 +37,13 @@ class SimEcu:
     freeze: dict[int, bytes] = field(default_factory=dict)
     # Maker-specific values (service 22): identifier -> data bytes at time t.
     extended: dict[int, Callable[[float], bytes]] = field(default_factory=dict)
+    # Configuration blocks (22 DExx) and how they are reached. A module with obd=False ignores
+    # broadcast OBD-II requests and answers only when addressed, as a body or cluster module does.
+    config: dict[int, bytes] = field(default_factory=dict)
+    config_needs_session: bool = False  # True: config reads are refused until 10 03
+    bus: str = "HS"  # HS, or MS for the slower bus an OBDLink reaches with STP53
+    obd: bool = True
+    session: int = 0x01
 
 
 @dataclass
@@ -50,22 +57,34 @@ class SimVehicle:
     def legacy(self) -> bool:
         return self.protocol in "12345"
 
-    def respond(self, request: bytes, t: float, only: int | None = None) -> list[tuple[int, bytes]]:
+    def respond(
+        self, request: bytes, t: float, only: int | None = None, bus: str = "HS"
+    ) -> list[tuple[int, bytes]]:
         """Replies to one request as (module, payload). Older networks get one entry per line.
 
         `only` is the module a request was addressed to; without it every module hears the request.
+        `bus` is the one the adapter is listening on; modules on the other bus hear nothing.
         """
         if not request:
             return []
         return [
             (ecu.address, payload)
             for ecu in self.ecus
-            if only is None or ecu.address == only
+            if ecu.bus == bus and (only is None or ecu.address == only) and (ecu.obd or only is not None)
             for payload in self._reply(ecu, request[0], request[1:], t, addressed=only is not None)
         ]
 
     def _reply(self, ecu: SimEcu, service: int, args: bytes, t: float, addressed: bool = False) -> list[bytes]:
         reply = bytes([service + 0x40])
+        if service == 0x10 and addressed and args[:1] in (b"\x01", b"\x03"):
+            ecu.session = args[0]
+            return [reply + args[:1] + b"\x00\x32\x01\xF4"]
+        if service == 0x22 and len(args) >= 2 and int.from_bytes(args[:2], "big") in ecu.config:
+            if ecu.config_needs_session and ecu.session != 0x03:
+                return [bytes([0x7F, 0x22, 0x7F])]  # not in this session
+            return [reply + args[:2] + ecu.config[int.from_bytes(args[:2], "big")]]
+        if not ecu.obd:
+            return [bytes([0x7F, service, 0x11 if service != 0x22 else 0x31])] if addressed else []
         if service == 0x22 and len(args) >= 2:
             identifier = int.from_bytes(args[:2], "big")
             if identifier in ecu.extended:
@@ -223,8 +242,29 @@ def _focus(name: str, vin: str, drive: Drive) -> SimVehicle:
                 },
             ),
             SimEcu(address=0x7E9, live={0x0D: lambda t: _u8(drive(t)[1])}, stored=("P0902",)),
+            *_focus_config_modules(),
         ],
     )
+
+
+def _focus_config_modules() -> list[SimEcu]:
+    """Body control (HS) and cluster (MS) with the captured car's configuration blocks.
+
+    One bit differs from the capture: the cluster's DE11 is FF FF 7F 3E, as FORScan wrote it
+    on the real car, so a read shows a change against the capture.
+    """
+    from .asbuilt import MODULES  # imported here: asbuilt does not need the simulator
+
+    def blocks(name: str) -> dict[int, bytes]:
+        module = next(m for m in MODULES if m.name == name)
+        return {int(did, 16): bytes.fromhex(data) for did, _, data in module.blocks if data}
+
+    cluster = blocks("IPC")
+    cluster[0xDE11] = bytes.fromhex("FFFF7F3E")
+    return [
+        SimEcu(address=0x72E, config=blocks("BdyCM"), config_needs_session=True, obd=False),
+        SimEcu(address=0x728, config=cluster, bus="MS", obd=False),
+    ]
 
 
 def make_focus() -> SimVehicle:
@@ -394,6 +434,7 @@ VEHICLES: dict[str, Callable[[], SimVehicle]] = {
 _ATDP_NAMES = {"2": "SAE J1850 VPW", "6": "ISO 15765-4 (CAN 11/500)"}
 _ACCEPTED_SETTINGS = re.compile(
     r"AT[012]|ST[0-9A-F]{2}|SH[0-9A-F]{3,8}|CAF[01]|CFC[01]|CRA[0-9A-F]*|AL|NL|M[01]|PC"
+    r"|FCSH[0-9A-F]{3}|FCSD[0-9A-F]{2,10}|FCSM[0-2]"
 )
 
 
@@ -421,6 +462,7 @@ class SimElm:
         self.chosen = "0"  # protocol the user asked for; "0" is automatic
         self.active: str | None = None  # protocol actually in use
         self.header: int | None = None  # the one module requests are addressed to; None means all of them
+        self.bus = "HS"  # STP53 moves an OBDLink to the MS bus; ATSP or ATTP moves it back
 
     def handle(self, raw: str) -> str:
         """Process one command line and return the full reply, prompt included."""
@@ -438,6 +480,11 @@ class SimElm:
                 return ["STN2230 v5.6.19 (simulated)"]
             if self.stn and command == "STDI":
                 return ["OBDLink EX r1.0 (simulated)"]
+            if self.stn and command == "STP53":
+                self.bus = "MS"
+                return ["OK"]
+            if self.stn and command == "STPBR125000":
+                return ["OK"]
             return ["?"]
         if re.fullmatch(r"(?:[0-9A-F]{2})+", command):
             return self._obd(bytes.fromhex(command))
@@ -470,7 +517,7 @@ class SimElm:
             return ["OK"]
         protocol = re.fullmatch(r"[ST]PA?([0-9A-C])", command)
         if protocol:
-            self.chosen, self.active = protocol.group(1), None
+            self.chosen, self.active, self.bus = protocol.group(1), None, "HS"
             return ["OK"]
         header = re.fullmatch(r"SH([0-9A-F]{3})", command)
         if header:
@@ -487,7 +534,7 @@ class SimElm:
             return searching + ["UNABLE TO CONNECT"]
         # On CAN a module answers eight above the address it is asked on: 7E1 asks, 7E9 answers.
         only = self.header + 8 if self.header is not None and not self.vehicle.legacy else None
-        replies = self.vehicle.respond(request, self._clock() - self._started, only)
+        replies = self.vehicle.respond(request, self._clock() - self._started, only, self.bus)
         if not replies:
             return searching + ["NO DATA"]
         self.active = self.vehicle.protocol
