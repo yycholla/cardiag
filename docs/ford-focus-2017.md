@@ -328,12 +328,13 @@ then changed back. Both writes went to block 18, `DE11`:
 | First write | `FF FF 7F 3E` | accepted |
 | Second write | `FF FF FF 3E` | accepted |
 
-The operator identified the toggled option as the **key-in-ignition beep**. The sweep in [`focus-2017-config-map.md`](focus-2017-config-map.md) agrees:
-"Chimes - Key In Ignition" is `DE11` byte 2 bit 7, with 1 = enabled, so the
-first write turned the chime off and the second turned it back on.
+The operator identified the toggled option as the **key-in-ignition beep**.
 On this Focus, the capture maps that option to the top bit of the third byte
-(mask `80` hex). The bit was cleared and then restored. The log does not say
-which state was labelled enabled in FORScan; do not infer that from bit order.
+(mask `80` hex). The bit was cleared and then restored. The capture alone does
+not say which state FORScan labels enabled, but the sweep in
+[`focus-2017-config-map.md`](focus-2017-config-map.md) does: "Chimes - Key In
+Ignition" is `DE11` byte 2 bit 7 with 1 = enabled, so the first write turned
+the chime off and the second turned it back on.
 
 The sequence, as sent:
 
