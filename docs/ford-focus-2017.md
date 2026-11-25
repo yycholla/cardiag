@@ -16,6 +16,14 @@ The data behind these notes:
   distinct request FORScan sent, with one reply each (432 of them).
 - [`data/focus-2017-asbuilt.txt`](data/focus-2017-asbuilt.txt): every
   configuration block, by module, with its value on this car.
+- [`data/focus-2017-ccc-map.txt`](data/focus-2017-ccc-map.txt): the body
+  control module's central configuration, byte by byte, with FORScan's names
+  (from a second session on 24 November).
+- [`focus-2017-settings.md`](focus-2017-settings.md): every setting FORScan
+  names for this car, with its value (same session).
+- [`focus-2017-config-map.md`](focus-2017-config-map.md): where each of those
+  settings lives (block, byte, bits) and what its values mean, for the body
+  control module and the cluster.
 - [`../tools/parse_forscan_capture.py`](../tools/parse_forscan_capture.py):
   turns a raw capture into the first of those.
 
@@ -148,7 +156,7 @@ request address plus 8.
 | `DD01` | Odometer | Three bytes, identical on every module that answers |
 | `DD02` | Battery voltage in quarter volts | One byte: `0x30` with the engine off, `0x38` or `0x39` with the adapter reading 14.3 to 14.7 V. ABS and steering answer `00` and `FF` |
 | `D100` | Active diagnostic session | Reads `01` in the default session and `03` after `10 03` |
-| `F106` | A list FORScan reads during the scan | Same long reply from body control and cluster |
+| `F106` | The central car configuration (CCC), 254 bytes | Same reply from body control and cluster; matches what FORScan reads through the bootloader. See "Reading the central configuration" |
 | `F188`, `F113` | Software and hardware part numbers | ASCII Ford part numbers |
 | `F190` | VIN | ASCII |
 | `F162` | Not known | One byte, read just before unlocking |
@@ -214,13 +222,58 @@ as-built data file.
 
 Two things that did not work:
 
-- The body control module refused `DE06`–`DE0A`. FORScan's named view of that
-  module ("BCM Module configuration", without "AS BUILT format") then asked for
-  a file, `GV6T-14C097-AA.VBF`, which its log calls a secondary bootloader. Its
-  download was refused (HTTP 401), so the named view never opened. The raw view
-  opens without it.
+- The body control module refused `DE06`–`DE0A`. On 23 November FORScan's
+  named view of that module then asked for a file, `GV6T-14C097-AA.VBF`, which
+  its log calls a secondary bootloader, and its download was refused (HTTP 401).
+  On 24 November the same named view opened without asking, reading only
+  `DE00`–`DE05` after unlocking.
 - The capture contains no setting labels. The operator identified the cluster
   option changed during this session: see [Changing a block](#changing-a-block).
+  [`focus-2017-config-map.md`](focus-2017-config-map.md) now places every named
+  setting.
+
+## Reading the central configuration
+
+Besides its as-built blocks, the body control module holds the car's central
+configuration (CCC): one byte per equipment option (engine, gearbox, tyre size,
+airbags, radio, and so on), about 250 in all. The cluster keeps a copy.
+FORScan calls them "Central configuration (Main)" and "(Backup)".
+
+**FORScan's way** (24 November, engine running for the bootloader step):
+
+| Step | Request to `726` | Reply |
+|---|---|---|
+| 1 | `10 02` (programming session) | `50 02 …` |
+| 2 | `27 01`, `27 02` and a key | `67 01` seed, `67 02` |
+| 3 | `34 …`, `36 …` ×5, `37` | Download of the secondary bootloader into RAM |
+| 4 | `34`/`36`/`37` ×5 more | Small further downloads |
+| 5 | `31 01 03 01 40 00 20 00` | Start the routine at `0x40002000`: run the bootloader |
+| 6 | `35 00 44 00 00 80 xx xx 00 00 00 20` ×18, each followed by `36 01` | Upload 32 bytes at a time from `0x00008000` on |
+
+Afterwards FORScan sent `11 81` to every module. While the body control module
+was running the bootloader it was silent on the bus, and the other modules
+logged it: the engine, SYNC, ABS, cluster and GPS stored lost-communication
+codes (`U0140` and others), and the engine stored `P025A` (fuel pump module
+circuit) and `P193E` (A/C clutch request), with a freeze frame one second after
+step 1. All the modules answered normally afterwards.
+
+**The other way, with no bootloader:** `22 F106` to `726` or `720` returns
+`62 F1 06`, then `FC 45`, then 252 bytes. They are the same bytes FORScan
+uploaded, less its last two (both `00`, which FORScan names "EUCD padding").
+A program that only reads can use this. The upload also returned a header
+(configuration document number, VIN) and two blocks that are all zero on this
+car; those are not in `F106`.
+
+[`data/focus-2017-ccc-map.txt`](data/focus-2017-ccc-map.txt) gives each byte's
+offset, its value on this car, FORScan's name for it, and what FORScan showed
+for that value. The names come from the order FORScan listed them in its
+"Engineering 2 (+ hidden)" view. That view has two rows fewer than there are
+bytes. The anchors are a spare byte that reads `00`, the battery type (`19`)
+and the two RCM bytes (`65 81`, the same as the airbag module's `DE02`, byte
+for byte reversed). From these, the two missing rows fall between "Traffic
+information system" and "Occupant weight sensor", and between "Touchscreen"
+and "Rear Entertainment System". Those three bytes are marked `?`. Only this
+car's value of each option is known, not what the other values would mean.
 
 ## Sessions and unlocking
 
@@ -277,8 +330,11 @@ then changed back. Both writes went to block 18, `DE11`:
 
 The operator identified the toggled option as the **key-in-ignition beep**.
 On this Focus, the capture maps that option to the top bit of the third byte
-(mask `80` hex). The bit was cleared and then restored. The log does not say
-which state was labelled enabled in FORScan; do not infer that from bit order.
+(mask `80` hex). The bit was cleared and then restored. The capture alone does
+not say which state FORScan labels enabled, but the sweep in
+[`focus-2017-config-map.md`](focus-2017-config-map.md) does: "Chimes - Key In
+Ignition" is `DE11` byte 2 bit 7 with 1 = enabled, so the first write turned
+the chime off and the second turned it back on.
 
 The sequence, as sent:
 
@@ -308,6 +364,53 @@ What it shows:
 
 This is one module, on the MS bus. That the others take the same sequence is
 likely but was not tried.
+
+## Placing named settings without writing
+
+[`../tools/forscan_dryrun_relay.py`](../tools/forscan_dryrun_relay.py) takes the
+logging relay's place between FORScan and the adapter. Reads go to the car.
+Anything that would change it (`2E`, `3B`, `11`, `14`, `04`, `31`, `28`, `85`,
+the programming session `10 02`, downloads and uploads) is answered by the
+relay and never sent. Block writes get a made-up "accepted" reply, so FORScan
+carries on as if the write worked, and the relay logs which bytes and bits
+FORScan wanted to change. It compares them with the last value of that block
+read from the car in the same session.
+
+```sh
+# instead of step 1 of the recording recipe (COM5 still points at /tmp/obd)
+python3 tools/forscan_dryrun_relay.py --log-dir ~/forscan-dryrun
+```
+
+Then, in FORScan, for each setting:
+
+1. Open the module's named view ("Module configuration"). It reads the blocks
+   from the car, which gives the relay its "before" values.
+2. Change one setting with "Edit selected", then press Write.
+3. The relay prints, for example, `BLOCKED write 720 DE11: byte 2: FF->7F bits [7]`
+   and adds the same to `writes.jsonl`. Note down which setting it was.
+4. Reopen the named view before the next one. The car was not changed, so it
+   reads the real values again.
+
+Run against yesterday's cluster write, it gives the same answer the real write
+did: `DE11`, byte 2, bit 7. Changing a setting to each of its values in turn
+gives each value's bit pattern.
+
+With `--replay capture.log transcript.log` the relay needs no adapter: it
+answers FORScan from recordings of earlier sessions (its own transcripts or a
+socat capture), keyed by protocol, header and request. FORScan connected, found
+every module and opened the named views this way, so the mapping in
+[`focus-2017-config-map.md`](focus-2017-config-map.md) ran with the car parked
+elsewhere. [`../tools/forscan_sweep/`](../tools/forscan_sweep/) drives FORScan
+through each setting in turn.
+
+Two limits:
+
+- FORScan's reply to the made-up acceptance is its own business. If it re-reads
+  the block to check, it will see the old value and may report a failure. The
+  log entry is made either way.
+- Only requests FORScan sends through the relay are seen. Settings that FORScan
+  writes some other way, such as the central configuration through the
+  bootloader, are refused (`7F 34 22`) rather than logged.
 
 ## Other things FORScan did
 
@@ -356,11 +459,15 @@ answer between `7E8` and `7EF`, on the HS bus. Against what is recorded here:
   voltage, a saved copy of the block beforehand, and a re-read afterwards.
 - **Names for the bits have to come from elsewhere:** FORScan's named views,
   one setting at a time as with `DE11` above, or owners' as-built tables.
+- **The central configuration is a plain read:** `22 F106` to `726`, decoded
+  with the byte map. No session, unlocking or bootloader is needed.
 
 ## Not known
 
 - The seed-to-key calculation.
-- Which bit state enables the key-in-ignition beep, and what the other configuration bits mean.
+- Where the few settings whose FORScan editor is a number box live (see
+  [`focus-2017-config-map.md`](focus-2017-config-map.md)).
+- Which two central configuration bytes FORScan does not show as rows.
 - Which engine-module identifier is which named value.
 - The names of the modules at `7E1`, `765` and `797`.
 - Whether the write sequence is the same on the HS-bus modules.
