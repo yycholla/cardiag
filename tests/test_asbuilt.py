@@ -35,8 +35,28 @@ def test_the_key_in_ignition_beep_reads_the_written_bit():
     beep = next(s for s in asbuilt.SETTINGS if s.id == "ipc.key_in_ignition_beep")
     assert beep.raw(bytes.fromhex("FFFFFF3E")) == 1
     assert beep.raw(bytes.fromhex("FFFF7F3E")) == 0
-    # Which state turns the beep on is not known, so the states are not named.
-    assert beep.describe(1) == "Bit set" and beep.describe(0) == "Bit clear"
+    assert beep.describe(1) == "Enabled" and beep.describe(0) == "Disabled"
+
+
+def test_forscan_reference_decodes_capture_and_preserves_uncertainty():
+    modules = asbuilt.report()["modules"]
+    rows = [s for m in modules for b in m["blocks"] for s in b["settings"]]
+    assert len(rows) == len({s["id"] for s in rows}) == 385
+    refs = [s for s in rows if s.get("read_only")]
+    assert len(refs) == 384 and {s["module"] for s in refs} == {"BdyCM", "IPC"}
+    light = next(s for s in refs if s["name"] == "Ambient Light Sensor")
+    assert (light["did"], light["byte"], light["mask"], light["raw"], light["text"]) == (
+        "DE00", 6, 0x80, 0, "Enabled",
+    )
+    approach = [s for s in refs if s["name"] == "Approach Light"]
+    assert [s["text"] for s in approach] == ["Enabled", "Disabled"]
+    assert all(s["byte"] == 35 and s["mask"] == 0x20 for s in approach)
+    uncertain = next(s for s in refs if s["name"] == "Heated Steering Wheel" and s["byte"] == 9)
+    assert uncertain["text"] == "00" and "Tentative" in uncertain["evidence"]
+    # The map's proposed car_value for this row is zero; the capture actually contains two.
+    impact = next(s for s in refs if s["name"] == "Impact Trigger")
+    assert impact["raw"] == 2 and impact["text"] == "02" and "options" not in impact
+    assert not any(s["name"] in {"TPM - Number of tires", "Chimes - Key In Ignition"} for s in rows)
 
 
 def test_each_kind_says_its_value_in_words():
@@ -79,7 +99,8 @@ def test_the_report_adds_examples_only_for_a_simulated_car():
     ipc = next(m for m in real["modules"] if m["name"] == "IPC")
     block = next(b for b in ipc["blocks"] if b["did"] == "DE11")
     assert block["hex"] == "FFFFFF3E" and block["size"] == 4
-    assert block["settings"][0]["raw"] == 1 and block["settings"][0]["states"] is None
+    chime = next(s for s in block["settings"] if s["id"] == "ipc.key_in_ignition_beep")
+    assert chime["raw"] == 1 and chime["states"] == ["Enabled", "Disabled"]
     simulated = asbuilt.report("focus")
     assert simulated["examples"] is True and simulated["modules"][-1]["name"] == "EXAMPLE"
     kinds = {s["kind"] for b in simulated["modules"][-1]["blocks"] for s in b["settings"]}

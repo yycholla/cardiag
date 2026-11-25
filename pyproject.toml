@@ -22,7 +22,7 @@ version = {attr = "cardiag.__version__"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-cardiag = ["web/*", "web/glasses/*", "web/glasses/assets/*"]
+cardiag = ["data/*.json", "web/*", "web/glasses/*", "web/glasses/assets/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
