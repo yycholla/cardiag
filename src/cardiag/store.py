@@ -66,6 +66,18 @@ CREATE TABLE IF NOT EXISTS settings (
     key    TEXT PRIMARY KEY,
     value  TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS config_snapshots (
+    id          INTEGER PRIMARY KEY,
+    parent_id   INTEGER REFERENCES config_snapshots(id),  -- the car's snapshot before this one
+    vin         TEXT NOT NULL,     -- or "unknown"
+    created_at  REAL NOT NULL,     -- Unix time
+    source      TEXT NOT NULL,     -- car | simulation | forscan
+    note        TEXT,
+    tree        TEXT NOT NULL,     -- JSON: every block known after this snapshot, {module: {DExx: hex}}
+    touched     TEXT NOT NULL,     -- JSON: the blocks this snapshot itself read or imported, same shape
+    problems    TEXT NOT NULL      -- JSON: blocks that could not be read, and why
+);
+CREATE INDEX IF NOT EXISTS config_snapshots_by_vin ON config_snapshots (vin, id);
 """
 
 # Added to "sessions" after the first release; older database files gain them on opening.
@@ -295,6 +307,40 @@ class Store:
             )
         return cursor.lastrowid
 
+    # ---- configuration snapshots: a history of each car's configuration blocks ----------
+
+    def add_snapshot(
+        self, *, vin: str | None, source: str, note: str | None, blocks: dict[str, dict[str, str]], problems: list[dict]
+    ) -> int:
+        """Keep what was read or imported. Like a commit, it records the whole state: the parent's
+        blocks with these laid over them."""
+        vin = vin or "unknown"
+        with self._db:
+            parent = self._db.execute(
+                "SELECT id, tree FROM config_snapshots WHERE vin = ? ORDER BY id DESC LIMIT 1", (vin,)
+            ).fetchone()
+            tree = json.loads(parent["tree"]) if parent else {}
+            for module, found in blocks.items():
+                tree.setdefault(module, {}).update(found)
+            cursor = self._db.execute(
+                "INSERT INTO config_snapshots (parent_id, vin, created_at, source, note, tree, touched, problems)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (parent["id"] if parent else None, vin, time.time(), source, note,
+                 json.dumps(tree, sort_keys=True), json.dumps(blocks, sort_keys=True), json.dumps(problems)),
+            )
+        return cursor.lastrowid
+
+    def snapshots(self, vin: str | None = None) -> list[dict]:
+        """Newest first; only one car's when a VIN is given."""
+        query = "SELECT * FROM config_snapshots" + (" WHERE vin = ?" if vin else "") + " ORDER BY id DESC"
+        return [_snapshot(row) for row in self._db.execute(query, (vin,) if vin else ())]
+
+    def snapshot(self, snapshot_id: int) -> dict:
+        row = self._db.execute("SELECT * FROM config_snapshots WHERE id = ?", (snapshot_id,)).fetchone()
+        if row is None:
+            raise KeyError(snapshot_id)
+        return _snapshot(row)
+
     # ---- discovery runs: the raw bytes of everything a module answers ------------
 
     def start_discovery(self, *, vin: str | None, module: str, note: str | None = None) -> int:
@@ -414,3 +460,11 @@ def _checked(payload: dict) -> tuple[dict, list[tuple], list[tuple]]:
     except (KeyError, TypeError, ValueError, AttributeError):
         raise ValueError("that is not a cardiag recording") from None
     return session, signals, samples
+
+
+def _snapshot(row: sqlite3.Row) -> dict:
+    return {
+        "id": row["id"], "parent": row["parent_id"], "vin": row["vin"], "created_at": row["created_at"],
+        "source": row["source"], "note": row["note"], "tree": json.loads(row["tree"]),
+        "touched": json.loads(row["touched"]), "problems": json.loads(row["problems"]),
+    }

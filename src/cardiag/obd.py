@@ -177,6 +177,27 @@ class Obd:
                 return bytes(message.data[3:])
         return None  # a refusal (7F 22 ..), which is how a module says it has no such value
 
+    def ask(self, request: int, reply: int, payload: bytes) -> bytes | None:
+        """Send one diagnostic request to one module and return its answer, positive or a refusal (7F ...).
+
+        None means the module said nothing. A "still working" refusal (7F xx 78) is passed over
+        when the real answer arrived with it.
+        """
+        if not self.maker_values:
+            raise ValueError("modules can only be addressed one by one on an 11-bit CAN network so far")
+        self._address(f"{request:03X}")
+        try:
+            lines = self.elm.request(payload.hex().upper())
+        except NoData:
+            return None
+        answers = [message.data for message in self._parse(lines) if message.ecu == reply and message.data]
+        final = [data for data in answers if not (data[:1] == b"\x7F" and data[2:3] == b"\x78")]
+        return (final or answers or [None])[-1]
+
+    def forget_header(self) -> None:
+        """The adapter's addressing was changed behind this object's back; set it again before the next request."""
+        self._header = "?"
+
     def supported_pids(self, service: int = 0x01) -> dict[int, set[int]]:
         """Which parameters each module offers, for live data (01) or freeze frame (02)."""
         if service in self._supported:

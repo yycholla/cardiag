@@ -19,7 +19,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from . import __version__, asbuilt, garage
+from . import __version__, backups, garage
 from .elm import AdapterError
 from .frames import FrameError
 from .network import NetworkError, Wifi
@@ -108,7 +108,14 @@ class _Handler(BaseHTTPRequestHandler):
         elif path == "/api/presets":
             self._json(garage.presets(hub))
         elif path == "/api/config":
-            self._json(asbuilt.report(hub.status()["simulation"]))
+            snapshot = parse_qs(urlsplit(self.path).query).get("snapshot", [""])[0]
+            self._job(lambda: backups.config_report(hub, self.server.db_path, snapshot))
+        elif path == "/api/config/history":
+            self._job(lambda: backups.history(hub, self.server.db_path))
+        elif path == "/api/config/compare":
+            query = parse_qs(urlsplit(self.path).query)
+            self._job(lambda: backups.compare(
+                self.server.db_path, query.get("before", ["capture"])[0], query.get("after", [""])[0]))
         elif path == "/api/maker":
             self._json(garage.maker_report(hub))
         elif path == "/api/discoveries":
@@ -179,6 +186,10 @@ class _Handler(BaseHTTPRequestHandler):
             self._job(lambda: garage.scan(hub, body))
         elif path == "/api/discover":
             self._job(lambda: garage.change_discovery(hub, self.server.db_path, body))
+        elif path == "/api/config/read":
+            self._job(lambda: backups.read_from_car(hub, self.server.db_path, body))
+        elif path == "/api/config/import":
+            self._job(lambda: backups.import_files(hub, self.server.db_path, body))
         elif path == "/api/interval":
             self._job(lambda: garage.set_interval(hub, self.server.db_path, body.get("seconds")))
         elif path == "/api/ingest" and self.server.accept_uploads:

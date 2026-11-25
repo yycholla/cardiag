@@ -18,7 +18,9 @@ import pytest
 
 import cardiag
 from cardiag.store import Store
+from cardiag import asbuilt
 from conftest import as_recording, geared_passes, wait_for
+from test_backups import abt
 
 def _find_engine() -> str | None:
     """The first candidate that actually runs; a version-manager shim may exist but not work."""
@@ -64,6 +66,13 @@ def test_page_script_with_real_server_data(box, tmp_path):
     data["setup"] = served.request("/api/setup")[1]
     data["presets"] = served.request("/api/presets")[1]
     data["config"] = served.request("/api/config")[1]
+    data["config_history_empty"] = served.request("/api/config/history")[1]
+    data["config_read"] = served.request("/api/config/read", {"note": "parked"})[1]
+    data["config_compare"] = served.request("/api/config/compare?before=capture&after=1")[1]
+    data["config_snapshot"] = served.request("/api/config?snapshot=1")[1]
+    backup = [{"name": "1FADP3F2XHL123456_IPC.abt", "text": abt("720", asbuilt.capture_tree()["IPC"])}]
+    data["config_imported"] = served.request("/api/config/import", {"files": backup})[1]
+    data["config_compare_import"] = served.request("/api/config/compare?before=1&after=2")[1]
     data["maker"] = served.request("/api/maker")[1]
     data["discoveries"] = served.request("/api/discoveries")[1]
     data["profile"] = served.request("/api/setup/profile", {"engine_litres": "2.0", "transmission": "dual-clutch automatic"})[1]

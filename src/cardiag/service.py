@@ -261,6 +261,10 @@ class Hub:
 
         return self._call(job, timeout=120.0)
 
+    def use_car(self, job: Callable[[Obd], Any], timeout: float = 30.0) -> Any:
+        """Run `job` with the connection, between passes, and return what it returns."""
+        return self._call(job, timeout)
+
     def set_watch(self, pids: list[str]) -> None:
         try:
             wanted = list(dict.fromkeys(int(pid, 16) for pid in pids))
